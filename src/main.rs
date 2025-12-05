@@ -11,7 +11,14 @@
 //!
 //! Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
 
+mod asset_tracking;
+mod audio;
 mod characters;
+#[cfg(feature = "dev")]
+mod dev_tools;
+mod menus;
+mod screens;
+mod theme;
 
 use bevy::{asset::AssetMetaCheck, prelude::*};
 
@@ -44,7 +51,16 @@ impl Plugin for AppPlugin {
             }),));
 
         // Add other plugins.
-        app.add_plugins(characters::plugin);
+        app.add_plugins((
+            asset_tracking::plugin,
+            audio::plugin,
+            characters::plugin,
+            #[cfg(feature = "dev")]
+            dev_tools::plugin,
+            menus::plugin,
+            screens::plugin,
+            theme::plugin,
+        ));
 
         // Order new `AppSystems` variants by adding them here:
         app.configure_sets(

@@ -15,9 +15,9 @@ set -e
 SCRIPT_DIR="$(dirname -- "$(readlink -f -- "${0}")")"
 
 # Define functions
-run_wasm() {
+run_web() {
     PACKAGE_NAME="$(tomlq -r '.package.name' "${SCRIPT_DIR}"/Cargo.toml)"
-    OUTPUT="${SCRIPT_DIR}"/target/wasm32-unknown-unknown/wasm-release/"${PACKAGE_NAME}".wasm
+    OUTPUT="${SCRIPT_DIR}"/target/wasm32-unknown-unknown/web-release/"${PACKAGE_NAME}".wasm
     CARGO_XDG_DIR=~/.local/share/cargo/bin
     CARGO_DIR=~/.cargo/bin
     WASM_RUNNER="wasm-server-runner"
@@ -35,12 +35,12 @@ run_wasm() {
 # Run specific build for given argument
 if [[ -z "${1}" ]]; then
     WINIT_UNIX_BACKEND="${XDG_SESSION_TYPE}" cargo run --release
-elif [[ "${1}" == "wasm" ]]; then
+elif [[ "${1}" == "web" ]]; then
     "${SCRIPT_DIR}"/build.sh "${1}"
-    run_wasm
-elif [[ "${1}" == "wasm-dev" ]]; then
+    run_web
+elif [[ "${1}" == "web-dev" ]]; then
     "${SCRIPT_DIR}"/build.sh "${1}"
-    run_wasm
+    run_web
 else
-    WINIT_UNIX_BACKEND="${XDG_SESSION_TYPE}" cargo run --features bevy/dynamic_linking
+    WINIT_UNIX_BACKEND="${XDG_SESSION_TYPE}" cargo run
 fi

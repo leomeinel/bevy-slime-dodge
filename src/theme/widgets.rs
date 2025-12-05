@@ -1,5 +1,5 @@
 /*
- * File: npc.rs
+ * File: widgets.rs
  * Author: Leopold Johannes Meinel (leo@meinel.dev)
  * -----
  * Copyright (c) 2025 Leopold Johannes Meinel & contributors
@@ -7,9 +7,9 @@
  * URL: https://www.apache.org/licenses/LICENSE-2.0
  */
 
-//! Npc
+//! Widgets
 
 use bevy::prelude::*;
 
 /// Plugin
-pub(super) fn plugin(app: &mut App) {}
+pub(crate) fn plugin(app: &mut App) {}

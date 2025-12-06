@@ -1,12 +1,19 @@
 /*
- * Source: https://github.com/TheBevyFlock/bevy_new_2d
+ * File: pause.rs
+ * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
+ * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 //! The pause menu.
 
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
-use crate::{menus::Menu, screens::Screen, theme::widget};
+use crate::{menus::Menu, screens::Screen, theme::widgets};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Pause), spawn_pause_menu);
@@ -18,14 +25,14 @@ pub(super) fn plugin(app: &mut App) {
 
 fn spawn_pause_menu(mut commands: Commands) {
     commands.spawn((
-        widget::ui_root("Pause Menu"),
+        widgets::common::ui_root("Pause Menu"),
         GlobalZIndex(2),
         DespawnOnExit(Menu::Pause),
         children![
-            widget::header("Game paused"),
-            widget::button("Continue", close_menu),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Quit to title", quit_to_title),
+            widgets::common::header("Game paused"),
+            widgets::common::button("Continue", close_menu),
+            widgets::common::button("Settings", open_settings_menu),
+            widgets::common::button("Quit to title", quit_to_title),
         ],
     ));
 }

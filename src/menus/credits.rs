@@ -1,5 +1,12 @@
 /*
- * Source: https://github.com/TheBevyFlock/bevy_new_2d
+ * File: credits.rs
+ * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
+ * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 //! The credits menu.
@@ -21,15 +28,15 @@ pub(super) fn plugin(app: &mut App) {
 
 fn spawn_credits_menu(mut commands: Commands) {
     commands.spawn((
-        widget::ui_root("Credits Menu"),
+        widgets::common::ui_root("Credits Menu"),
         GlobalZIndex(2),
         DespawnOnExit(Menu::Credits),
         children![
-            widget::header("Created by"),
+            widgets::common::header("Created by"),
             created_by(),
-            widget::header("Assets"),
+            widgets::common::header("Assets"),
             assets(),
-            widget::button("Back", go_back_on_click),
+            widgets::common::button("Back", go_back_on_click),
         ],
     ));
 }
@@ -66,7 +73,7 @@ fn grid(content: Vec<[&'static str; 2]>) -> impl Bundle {
         Children::spawn(SpawnIter(content.into_iter().flatten().enumerate().map(
             |(i, text)| {
                 (
-                    widget::label(text),
+                    widgets::common::label(text),
                     Node {
                         justify_self: if i.is_multiple_of(2) {
                             JustifySelf::End

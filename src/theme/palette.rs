@@ -1,20 +1,27 @@
 /*
- * Source: https://github.com/TheBevyFlock/bevy_new_2d
+ * File: palette.rs
+ * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
+ * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 use bevy::{color::palettes::tailwind, prelude::*};
 
-/// #ddd369
-pub const LABEL_TEXT: Color = tailwind::YELLOW_500;
+/// rgb(74, 222, 128)
+pub const LABEL_TEXT: Srgba = tailwind::GREEN_400;
 
-/// #fcfbcc
-pub const HEADER_TEXT: Color = tailwind::YELLOW_100;
+/// rgb(187, 247, 208)
+pub const HEADER_TEXT: Srgba = tailwind::GREEN_200;
 
-/// #ececec
-pub const BUTTON_TEXT: Color = tailwind::RED_100;
-/// #4666bf
-pub const BUTTON_BACKGROUND: Color = tailwind::BLUE_500;
-/// #6299d1
-pub const BUTTON_HOVERED_BACKGROUND: Color = tailwind::BLUE_200;
-/// #3d4999
-pub const BUTTON_PRESSED_BACKGROUND: Color = tailwind::BLUE_700;
+/// rgb(229, 229, 229)
+pub const BUTTON_TEXT: Srgba = tailwind::NEUTRAL_200;
+/// rgb(6, 182, 212)
+pub const BUTTON_BACKGROUND: Srgba = tailwind::CYAN_500;
+/// rgb(103, 232, 249)
+pub const BUTTON_HOVERED_BACKGROUND: Srgba = tailwind::CYAN_300;
+/// rgb(14, 116, 144)
+pub const BUTTON_PRESSED_BACKGROUND: Srgba = tailwind::CYAN_700;

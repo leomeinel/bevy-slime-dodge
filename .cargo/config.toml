@@ -1,4 +1,4 @@
-# Source: https://raw.githubusercontent.com/bevyengine/bevy/main/.cargo/config_fast_builds.toml
+# Heavily inspired by: https://raw.githubusercontent.com/bevyengine/bevy/main/.cargo/config_fast_builds.toml
 
 # Copy this file to `config.toml` to speed up your builds.
 #

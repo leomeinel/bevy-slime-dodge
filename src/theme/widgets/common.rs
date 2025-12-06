@@ -1,5 +1,12 @@
 /*
- * Source: https://github.com/TheBevyFlock/bevy_new_2d
+ * File: common.rs
+ * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
+ * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 //! Helper functions for creating common widgets.
@@ -38,7 +45,7 @@ pub fn header(text: impl Into<String>) -> impl Bundle {
         Name::new("Header"),
         Text(text.into()),
         TextFont::from_font_size(40.0),
-        TextColor(HEADER_TEXT),
+        TextColor(HEADER_TEXT.into()),
     )
 }
 
@@ -48,7 +55,7 @@ pub fn label(text: impl Into<String>) -> impl Bundle {
         Name::new("Label"),
         Text(text.into()),
         TextFont::from_font_size(24.0),
-        TextColor(LABEL_TEXT),
+        TextColor(LABEL_TEXT.into()),
     )
 }
 
@@ -116,17 +123,17 @@ where
                 .spawn((
                     Name::new("Button Inner"),
                     Button,
-                    BackgroundColor(BUTTON_BACKGROUND),
+                    BackgroundColor(BUTTON_BACKGROUND.into()),
                     InteractionPalette {
-                        none: BUTTON_BACKGROUND,
-                        hovered: BUTTON_HOVERED_BACKGROUND,
-                        pressed: BUTTON_PRESSED_BACKGROUND,
+                        none: BUTTON_BACKGROUND.into(),
+                        hovered: BUTTON_HOVERED_BACKGROUND.into(),
+                        pressed: BUTTON_PRESSED_BACKGROUND.into(),
                     },
                     children![(
                         Name::new("Button Text"),
                         Text(text),
                         TextFont::from_font_size(40.0),
-                        TextColor(BUTTON_TEXT),
+                        TextColor(BUTTON_TEXT.into()),
                         // Don't bubble picking events from the text up to the button.
                         Pickable::IGNORE,
                     )],

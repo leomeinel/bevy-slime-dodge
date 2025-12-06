@@ -9,7 +9,4 @@
 
 //! Widgets
 
-use bevy::prelude::*;
-
-/// Plugin
-pub(crate) fn plugin(app: &mut App) {}
+pub(crate) mod common;

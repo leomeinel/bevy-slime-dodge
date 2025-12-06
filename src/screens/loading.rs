@@ -1,5 +1,12 @@
 /*
- * Source: https://github.com/TheBevyFlock/bevy_new_2d
+ * File: loading.rs
+ * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
+ * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 //! A loading screen during which game assets are loaded if necessary.
@@ -20,9 +27,9 @@ pub(super) fn plugin(app: &mut App) {
 
 fn spawn_loading_screen(mut commands: Commands) {
     commands.spawn((
-        widget::ui_root("Loading Screen"),
+        widgets::common::ui_root("Loading Screen"),
         DespawnOnExit(Screen::Loading),
-        children![widget::label("Loading...")],
+        children![widgets::common::label("Loading...")],
     ));
 }
 

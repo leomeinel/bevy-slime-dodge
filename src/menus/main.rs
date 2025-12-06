@@ -1,14 +1,19 @@
 /*
  * File: main.rs
  * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
  * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 //! The main menu (seen on the title screen).
 
 use bevy::prelude::*;
 
-use crate::{asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widget};
+use crate::{asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widgets};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Main), spawn_main_menu);
@@ -16,21 +21,21 @@ pub(super) fn plugin(app: &mut App) {
 
 fn spawn_main_menu(mut commands: Commands) {
     commands.spawn((
-        widget::ui_root("Main Menu"),
+        widgets::common::ui_root("Main Menu"),
         GlobalZIndex(2),
         DespawnOnExit(Menu::Main),
         #[cfg(not(target_family = "wasm"))]
         children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Credits", open_credits_menu),
-            widget::button("Exit", exit_app),
+            widgets::common::button("Play", enter_loading_or_gameplay_screen),
+            widgets::common::button("Settings", open_settings_menu),
+            widgets::common::button("Credits", open_credits_menu),
+            widgets::common::button("Exit", exit_app),
         ],
         #[cfg(target_family = "wasm")]
         children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Credits", open_credits_menu),
+            widgets::common::button("Play", enter_loading_or_gameplay_screen),
+            widgets::common::button("Settings", open_settings_menu),
+            widgets::common::button("Credits", open_credits_menu),
         ],
     ));
 }

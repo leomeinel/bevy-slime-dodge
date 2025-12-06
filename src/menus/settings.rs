@@ -1,5 +1,12 @@
 /*
- * Source: https://github.com/TheBevyFlock/bevy_new_2d
+ * File: settings.rs
+ * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
+ * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 //! The settings menu.
@@ -25,13 +32,13 @@ pub(super) fn plugin(app: &mut App) {
 
 fn spawn_settings_menu(mut commands: Commands) {
     commands.spawn((
-        widget::ui_root("Settings Menu"),
+        widgets::common::ui_root("Settings Menu"),
         GlobalZIndex(2),
         DespawnOnExit(Menu::Settings),
         children![
-            widget::header("Settings"),
+            widgets::common::header("Settings"),
             settings_grid(),
-            widget::button("Back", go_back_on_click),
+            widgets::common::button("Back", go_back_on_click),
         ],
     ));
 }
@@ -48,7 +55,7 @@ fn settings_grid() -> impl Bundle {
         },
         children![
             (
-                widget::label("Master Volume"),
+                widgets::common::label("Master Volume"),
                 Node {
                     justify_self: JustifySelf::End,
                     ..default()
@@ -67,7 +74,7 @@ fn global_volume_widget() -> impl Bundle {
             ..default()
         },
         children![
-            widget::button_small("-", lower_global_volume),
+            widgets::common::button_small("-", lower_global_volume),
             (
                 Name::new("Current Volume"),
                 Node {
@@ -75,9 +82,9 @@ fn global_volume_widget() -> impl Bundle {
                     justify_content: JustifyContent::Center,
                     ..default()
                 },
-                children![(widget::label(""), GlobalVolumeLabel)],
+                children![(widgets::common::label(""), GlobalVolumeLabel)],
             ),
-            widget::button_small("+", raise_global_volume),
+            widgets::common::button_small("+", raise_global_volume),
         ],
     )
 }

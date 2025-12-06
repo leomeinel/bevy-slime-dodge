@@ -10,11 +10,12 @@
 //! Characters
 
 pub(crate) mod npc;
+pub(crate) mod player;
 
 use bevy::prelude::*;
 
 /// Plugin
 pub(super) fn plugin(app: &mut App) {
     // Add plugins
-    app.add_plugins(npc::plugin);
+    app.add_plugins((npc::plugin, player::plugin));
 }

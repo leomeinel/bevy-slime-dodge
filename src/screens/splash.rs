@@ -1,10 +1,18 @@
 /*
- * Source: https://github.com/TheBevyFlock/bevy_new_2d
+ * File: splash.rs
+ * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
+ * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 //! A splash screen that plays briefly at startup.
 
 use bevy::{
+    color::palettes::tailwind,
     image::{ImageLoaderSettings, ImageSampler},
     input::common_conditions::input_just_pressed,
     prelude::*,
@@ -14,7 +22,7 @@ use crate::{AppSystems, screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     // Spawn splash screen.
-    app.insert_resource(ClearColor(SPLASH_BACKGROUND_COLOR));
+    app.insert_resource(ClearColor(SPLASH_BACKGROUND_COLOR.into()));
     app.add_systems(OnEnter(Screen::Splash), spawn_splash_screen);
 
     // Animate splash screen.
@@ -47,14 +55,15 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-const SPLASH_BACKGROUND_COLOR: Color = Color::srgb(0.157, 0.157, 0.157);
+/// rgb(38, 38, 38)
+const SPLASH_BACKGROUND_COLOR: Srgba = tailwind::NEUTRAL_800;
 const SPLASH_DURATION_SECS: f32 = 1.8;
 const SPLASH_FADE_DURATION_SECS: f32 = 0.6;
 
 fn spawn_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
-        widget::ui_root("Splash Screen"),
-        BackgroundColor(SPLASH_BACKGROUND_COLOR),
+        widgets::common::ui_root("Splash Screen"),
+        BackgroundColor(SPLASH_BACKGROUND_COLOR.into()),
         DespawnOnExit(Screen::Splash),
         children![(
             Name::new("Splash image"),

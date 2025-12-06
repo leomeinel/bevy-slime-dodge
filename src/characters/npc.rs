@@ -7,7 +7,7 @@
  * URL: https://www.apache.org/licenses/LICENSE-2.0
  */
 
-//! Npc
+//! Any non playable character.
 
 use bevy::prelude::*;
 

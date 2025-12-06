@@ -1,15 +1,22 @@
 /*
- * Source: https://github.com/TheBevyFlock/bevy_new_2d
+ * File: gameplay.rs
+ * Author: Leopold Johannes Meinel (leo@meinel.dev)
+ * -----
+ * Copyright (c) 2025 Leopold Johannes Meinel & contributors
+ * SPDX ID: Apache-2.0
+ * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
 //! The screen state for the main gameplay.
 
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
-use crate::{Pause, demo::level::spawn_level, menus::Menu, screens::Screen};
+use crate::{Pause, /*demo::level::spawn_level,*/ menus::Menu, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
+    // app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
 
     // Toggle pause on key press.
     app.add_systems(
@@ -42,6 +49,9 @@ fn pause(mut next_pause: ResMut<NextState<Pause>>) {
     next_pause.set(Pause(true));
 }
 
+/// rgba(0, 0, 0, 204)
+const BACKGROUND_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8);
+
 fn spawn_pause_overlay(mut commands: Commands) {
     commands.spawn((
         Name::new("Pause Overlay"),
@@ -51,7 +61,7 @@ fn spawn_pause_overlay(mut commands: Commands) {
             ..default()
         },
         GlobalZIndex(1),
-        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
+        BackgroundColor(BACKGROUND_COLOR),
         DespawnOnExit(Pause(true)),
     ));
 }

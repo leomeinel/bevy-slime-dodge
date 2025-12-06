@@ -9,6 +9,7 @@
 
 //! Characters
 
+pub(crate) mod animation;
 pub(crate) mod npc;
 pub(crate) mod player;
 
@@ -17,5 +18,5 @@ use bevy::prelude::*;
 /// Plugin
 pub(super) fn plugin(app: &mut App) {
     // Add plugins
-    app.add_plugins((npc::plugin, player::plugin));
+    app.add_plugins((animation::plugin, npc::plugin, player::plugin));
 }

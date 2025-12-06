@@ -24,8 +24,10 @@ mod dev_tools;
 mod menus;
 mod screens;
 mod theme;
+mod worlds;
 
-use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResized};
+use bevy_rapier2d::plugin::RapierPhysicsPlugin;
 
 /// Main function
 fn main() -> AppExit {
@@ -48,12 +50,12 @@ impl Plugin for AppPlugin {
             .set(WindowPlugin {
                 primary_window: Window {
                     title: "bevy-slime-dodge".to_string(),
-                    fit_canvas_to_parent: true,
                     ..default()
                 }
                 .into(),
                 ..default()
-            }),));
+            })
+            .set(ImagePlugin::default_nearest()),));
 
         // Add other plugins.
         app.add_plugins((
@@ -65,7 +67,11 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
+            worlds::plugin,
         ));
+
+        // Rapier
+        app.add_plugins(RapierPhysicsPlugin::<()>::default());
 
         // Order new `AppSystems` variants by adding them here:
         app.configure_sets(
@@ -84,6 +90,8 @@ impl Plugin for AppPlugin {
 
         // Spawn the main camera.
         app.add_systems(Startup, spawn_camera);
+
+        app.add_systems(Update, fit_canvas);
     }
 }
 
@@ -108,7 +116,34 @@ struct Pause(pub bool);
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
 
+/// Camera that renders the pixel-perfect world to the [`Canvas`].
+#[derive(Component)]
+struct CanvasCamera;
+
 /// Spawn [`Camera2d`]
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera2d));
+    commands.spawn((Name::new("Camera"), Camera2d, Msaa::Off, CanvasCamera));
+}
+
+/// In-game resolution width.
+const RES_WIDTH: u32 = 320;
+
+/// In-game resolution height.
+const RES_HEIGHT: u32 = 180;
+
+/// Scales camera projection to fit the window (integer multiples only).
+///
+/// Source: https://bevy.org/examples/2d-rendering/pixel-grid-snap/
+fn fit_canvas(
+    mut resize_messages: MessageReader<WindowResized>,
+    mut projection: Single<&mut Projection, With<CanvasCamera>>,
+) {
+    let Projection::Orthographic(projection) = &mut **projection else {
+        return;
+    };
+    for window_resized in resize_messages.read() {
+        let h_scale = window_resized.width / RES_WIDTH as f32;
+        let v_scale = window_resized.height / RES_HEIGHT as f32;
+        projection.scale = 1. / h_scale.min(v_scale).round();
+    }
 }

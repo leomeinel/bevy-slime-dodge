@@ -1,5 +1,5 @@
 /*
- * File: npc.rs
+ * File: worlds.rs
  * Author: Leopold Johannes Meinel (leo@meinel.dev)
  * -----
  * Copyright (c) 2025 Leopold Johannes Meinel & contributors
@@ -7,9 +7,14 @@
  * URL: https://www.apache.org/licenses/LICENSE-2.0
  */
 
-//! Npc-specific behavior.
+//! Game worlds
+
+pub(crate) mod overworld;
 
 use bevy::prelude::*;
 
 /// Plugin
-pub(super) fn plugin(app: &mut App) {}
+pub(super) fn plugin(app: &mut App) {
+    // Add plugins
+    app.add_plugins(overworld::plugin);
+}

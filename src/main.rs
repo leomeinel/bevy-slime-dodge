@@ -27,6 +27,8 @@ mod theme;
 mod worlds;
 
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResized};
+use bevy_prng::WyRand;
+use bevy_rand::plugin::EntropyPlugin;
 use bevy_rapier2d::plugin::RapierPhysicsPlugin;
 
 /// Main function
@@ -57,6 +59,12 @@ impl Plugin for AppPlugin {
             })
             .set(ImagePlugin::default_nearest()),));
 
+        // Libraries
+        app.add_plugins((
+            RapierPhysicsPlugin::<()>::default(),
+            EntropyPlugin::<WyRand>::default(),
+        ));
+
         // Add other plugins.
         app.add_plugins((
             asset_tracking::plugin,
@@ -69,9 +77,6 @@ impl Plugin for AppPlugin {
             theme::plugin,
             worlds::plugin,
         ));
-
-        // Rapier
-        app.add_plugins(RapierPhysicsPlugin::<()>::default());
 
         // Order new `AppSystems` variants by adding them here:
         app.configure_sets(

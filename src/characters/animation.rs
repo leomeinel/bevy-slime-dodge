@@ -14,13 +14,18 @@
 //! - [Timers](https://github.com/bevyengine/bevy/blob/latest/examples/time/timers.rs)
 
 use bevy::prelude::*;
+use bevy_prng::WyRand;
+use bevy_rand::{global::GlobalRng, traits::ForkableSeed as _};
 use bevy_rapier2d::prelude::*;
-use rand::prelude::*;
+use rand::seq::IndexedRandom as _;
 use std::time::Duration;
 
 use crate::{AppSystems, PausableSystems, audio::sound_effect, characters::player::PlayerAssets};
 
 pub(super) fn plugin(app: &mut App) {
+    // Setup rng source
+    app.add_systems(Startup, setup_rng);
+
     // Animate and play sound effects based on controls.
     app.add_systems(
         Update,
@@ -36,6 +41,13 @@ pub(super) fn plugin(app: &mut App) {
         )
             .in_set(PausableSystems),
     );
+}
+
+#[derive(Component)]
+struct Rng;
+
+fn setup_rng(mut commands: Commands, mut global: Single<&mut WyRand, With<GlobalRng>>) {
+    commands.spawn((Rng, global.fork_seed()));
 }
 
 /// Update the animation timer.
@@ -89,14 +101,18 @@ fn trigger_step_sound_effect(
     mut commands: Commands,
     player_assets: If<Res<PlayerAssets>>,
     mut step_query: Query<&PlayerAnimation>,
+    mut rng_query: Single<&mut WyRand, With<Rng>>,
 ) {
     for animation in &mut step_query {
         if animation.state == PlayerAnimationState::Walking
             && animation.changed()
             && (animation.frame == 5 || animation.frame == 9)
         {
-            let rng = &mut rand::rng();
-            let random_step = player_assets.steps.choose(rng).unwrap().clone();
+            let random_step = player_assets
+                .steps
+                .choose(rng_query.as_mut())
+                .unwrap()
+                .clone();
             commands.spawn(sound_effect(random_step));
         }
     }

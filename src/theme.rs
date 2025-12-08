@@ -26,5 +26,6 @@ pub mod prelude {
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
+    // Add child plugins
     app.add_plugins(interaction::plugin);
 }

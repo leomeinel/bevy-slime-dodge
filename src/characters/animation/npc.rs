@@ -24,7 +24,9 @@ use crate::{
 };
 
 pub(super) fn plugin(app: &mut App) {
+    // Add resource for animation frames that should play a sound
     app.insert_resource(SlimeSoundFrames(vec![3]));
+
     // Animate and play sound effects based on controls.
     app.add_systems(
         Update,

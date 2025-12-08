@@ -18,12 +18,15 @@ use bevy::{audio::Volume, input::common_conditions::input_just_pressed, prelude:
 use crate::{menus::Menu, screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
+    // Open settings menu on state
     app.add_systems(OnEnter(Menu::Settings), spawn_settings_menu);
+
+    // Exit settings menu on pressing Escape
     app.add_systems(
         Update,
         go_back.run_if(in_state(Menu::Settings).and(input_just_pressed(KeyCode::Escape))),
     );
-
+    // Handle changes to global volume from settings menu
     app.add_systems(
         Update,
         update_global_volume_label.run_if(in_state(Menu::Settings)),
@@ -107,8 +110,8 @@ fn raise_global_volume(_: On<Pointer<Click>>, mut global_volume: ResMut<GlobalVo
 struct GlobalVolumeLabel;
 
 fn update_global_volume_label(
-    global_volume: Res<GlobalVolume>,
     mut label: Single<&mut Text, With<GlobalVolumeLabel>>,
+    global_volume: Res<GlobalVolume>,
 ) {
     let percent = 100.0 * global_volume.volume.to_linear();
     label.0 = format!("{percent:3.0}%");

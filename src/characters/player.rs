@@ -24,14 +24,15 @@ use crate::{
     },
 };
 
-/// Plugin
 pub(super) fn plugin(app: &mut App) {
+    // Add loading states via bevy_asset_loader
     app.add_loading_state(
         LoadingState::new(AssetState::AssetLoading)
             .continue_to_state(AssetState::Next)
             .load_collection::<PlayerAssets>(),
     );
 
+    // Handle bevy_enhanced_input with input context and observers
     app.add_input_context::<Player>();
     app.add_observer(apply_movement);
     app.add_observer(stop_movement);
@@ -105,16 +106,16 @@ pub(crate) fn player(player_assets: &PlayerAssets) -> impl Bundle {
 
 /// Apply movement
 fn apply_movement(
-    movement_event: On<Fire<Movement>>,
+    event: On<Fire<Movement>>,
     time: Res<Time>,
     mut controller: Single<&mut KinematicCharacterController, With<Player>>,
 ) {
-    controller.translation = Some(movement_event.value * time.delta_secs());
+    controller.translation = Some(event.value * time.delta_secs());
 }
 
 /// Stop movement
 fn stop_movement(
-    _movement_event: On<Complete<Movement>>,
+    _: On<Complete<Movement>>,
     mut controller: Single<&mut KinematicCharacterController, With<Player>>,
 ) {
     controller.translation = Some(Vec2::ZERO);

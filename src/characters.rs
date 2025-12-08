@@ -17,9 +17,8 @@ use bevy::prelude::*;
 
 use crate::characters::animation::MovementAnimation;
 
-/// Plugin
 pub(super) fn plugin(app: &mut App) {
-    // Add plugins
+    // Add child plugins
     app.add_plugins((animation::plugin, npc::plugin, player::plugin));
 }
 

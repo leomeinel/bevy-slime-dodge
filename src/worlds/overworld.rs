@@ -23,8 +23,8 @@ use crate::{
     screens::Screen,
 };
 
-/// Plugin
 pub(super) fn plugin(app: &mut App) {
+    // Add loading states via bevy_asset_loader
     app.add_loading_state(
         LoadingState::new(AssetState::AssetLoading)
             .continue_to_state(AssetState::Next)

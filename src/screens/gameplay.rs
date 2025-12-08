@@ -16,9 +16,10 @@ use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use crate::{Pause, menus::Menu, screens::Screen, worlds::overworld::spawn_level};
 
 pub(super) fn plugin(app: &mut App) {
+    // Open gameplay screen
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
 
-    // Toggle pause on key press.
+    // Open pause on pressing P or Escape and pause game
     app.add_systems(
         Update,
         (
@@ -34,7 +35,10 @@ pub(super) fn plugin(app: &mut App) {
             ),
         ),
     );
+    // Exit pause menu on pressing Escape and unpause game
     app.add_systems(OnExit(Screen::Gameplay), (close_menu, unpause));
+
+    // Unpause if in no menu and in gameplay screen
     app.add_systems(
         OnEnter(Menu::None),
         unpause.run_if(in_state(Screen::Gameplay)),

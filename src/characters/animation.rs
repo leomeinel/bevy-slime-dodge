@@ -18,17 +18,14 @@ pub(crate) mod player;
 
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_prng::WyRand;
-use bevy_rand::{global::GlobalRng, traits::ForkableSeed as _};
 use bevy_rapier2d::prelude::*;
 use rand::seq::IndexedRandom as _;
 use std::time::Duration;
 
-use crate::{audio::sound_effect, characters::CharacterAssets};
+use crate::{audio::sound_effect, characters::CharacterAssets, rng::AnimationRng};
 
 pub(super) fn plugin(app: &mut App) {
-    // Setup rng source
-    app.add_systems(Startup, setup_rng);
-
+    // Add child plugins
     app.add_plugins((npc::plugin, player::plugin));
 }
 
@@ -36,13 +33,6 @@ pub(super) fn plugin(app: &mut App) {
 pub enum MovementAnimationState {
     Idling,
     Walking,
-}
-
-#[derive(Component)]
-pub(crate) struct Rng;
-
-fn setup_rng(mut commands: Commands, mut global: Single<&mut WyRand, With<GlobalRng>>) {
-    commands.spawn((Rng, global.fork_seed()));
 }
 
 pub(crate) trait MovementAnimation {
@@ -144,7 +134,7 @@ pub(crate) trait SoundFrames {
 }
 
 /// Update the animation timer.
-pub(crate) fn update_animation_timer<T>(time: Res<Time>, mut query: Query<&mut T>)
+pub(crate) fn update_animation_timer<T>(mut query: Query<&mut T>, time: Res<Time>)
 where
     T: Component<Mutability = Mutable> + MovementAnimation,
 {
@@ -195,11 +185,11 @@ where
 /// If the character is moving, play a step sound effect synchronized with the
 /// animation.
 pub(crate) fn trigger_step_sound_effect<T, A, B>(
+    mut rng: Single<&mut WyRand, With<AnimationRng>>,
+    mut query: Query<&T>,
     mut commands: Commands,
     assets: If<Res<A>>,
     sound_frames: Res<B>,
-    mut query: Query<&T>,
-    mut rng: Single<&mut WyRand, With<Rng>>,
 ) where
     T: Component<Mutability = Mutable> + MovementAnimation,
     A: Resource + CharacterAssets<Animation = T>,

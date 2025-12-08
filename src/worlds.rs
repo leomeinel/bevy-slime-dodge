@@ -13,8 +13,7 @@ pub(crate) mod overworld;
 
 use bevy::prelude::*;
 
-/// Plugin
 pub(super) fn plugin(app: &mut App) {
-    // Add plugins
+    // Add child plugins
     app.add_plugins(overworld::plugin);
 }

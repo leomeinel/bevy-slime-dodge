@@ -16,10 +16,12 @@ use bevy::prelude::*;
 use crate::{menus::Menu, screens::Screen, theme::widgets};
 
 pub(super) fn plugin(app: &mut App) {
+    // Open main menu
     app.add_systems(OnEnter(Menu::Main), spawn_main_menu);
 }
 
 fn spawn_main_menu(mut commands: Commands) {
+    // Spawn Main menu with state changing buttons
     commands.spawn((
         widgets::common::ui_root("Main Menu"),
         GlobalZIndex(2),
@@ -31,6 +33,7 @@ fn spawn_main_menu(mut commands: Commands) {
             widgets::common::button("Credits", open_credits_menu),
             widgets::common::button("Exit", exit_app),
         ],
+        // Do not add exit button for wasm
         #[cfg(target_family = "wasm")]
         children![
             widgets::common::button("Play", enter_loading_or_gameplay_screen),
@@ -56,7 +59,7 @@ fn enter_loading_or_gameplay_screen(
 }
 */
 
-// FIXME: Remove this workaround after above has been adressed
+// FIXME: Remove this workaround after above has been addressed
 fn enter_loading_or_gameplay_screen(
     _: On<Pointer<Click>>,
     mut next_screen: ResMut<NextState<Screen>>,
@@ -73,6 +76,6 @@ fn open_credits_menu(_: On<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu
 }
 
 #[cfg(not(target_family = "wasm"))]
-fn exit_app(_: On<Pointer<Click>>, mut app_exit: MessageWriter<AppExit>) {
-    app_exit.write(AppExit::Success);
+fn exit_app(_: On<Pointer<Click>>, mut app_exit_msg: MessageWriter<AppExit>) {
+    app_exit_msg.write(AppExit::Success);
 }

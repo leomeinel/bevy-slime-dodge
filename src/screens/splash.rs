@@ -17,22 +17,33 @@ use bevy_asset_loader::prelude::*;
 use crate::{AppSystems, asset_tracking::AssetState, screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
+    // Add loading states via bevy_asset_loader
     app.add_loading_state(
         LoadingState::new(AssetState::AssetLoading)
             .continue_to_state(AssetState::Next)
             .load_collection::<SplashAssets>(),
     );
+    // After loading assets, change state to splash screen
+    app.add_systems(
+        OnEnter(AssetState::Next),
+        |mut next_state: ResMut<NextState<Screen>>| next_state.set(Screen::Splash),
+    );
 
-    app.add_systems(OnEnter(AssetState::Next), enter_splash_screen);
+    // Exit splash screen early on pressing Escape
+    app.add_systems(
+        Update,
+        enter_title_screen
+            .run_if(input_just_pressed(KeyCode::Escape).and(in_state(Screen::Splash))),
+    );
 
-    // Spawn splash screen.
+    // Open splash screen
     app.insert_resource(ClearColor(SPLASH_BACKGROUND_COLOR.into()));
     app.add_systems(
         OnEnter(Screen::Splash),
         spawn_splash_screen.run_if(in_state(AssetState::Next)),
     );
 
-    // Animate splash screen.
+    // Animate splash screen
     app.add_systems(
         Update,
         (
@@ -42,7 +53,7 @@ pub(super) fn plugin(app: &mut App) {
             .run_if(in_state(Screen::Splash)),
     );
 
-    // Add splash timer.
+    // Add splash timer
     app.add_systems(OnEnter(Screen::Splash), insert_splash_timer);
     app.add_systems(OnExit(Screen::Splash), remove_splash_timer);
     app.add_systems(
@@ -52,13 +63,6 @@ pub(super) fn plugin(app: &mut App) {
             check_splash_timer.in_set(AppSystems::Update),
         )
             .run_if(in_state(Screen::Splash)),
-    );
-
-    // Exit the splash screen early if the player hits escape.
-    app.add_systems(
-        Update,
-        enter_title_screen
-            .run_if(input_just_pressed(KeyCode::Escape).and(in_state(Screen::Splash))),
     );
 }
 
@@ -73,10 +77,6 @@ struct SplashAssets {
 const SPLASH_BACKGROUND_COLOR: Srgba = tailwind::NEUTRAL_800;
 const SPLASH_DURATION_SECS: f32 = 1.8;
 const SPLASH_FADE_DURATION_SECS: f32 = 0.6;
-
-fn enter_splash_screen(mut next_state: ResMut<NextState<Screen>>) {
-    next_state.set(Screen::Splash);
-}
 
 fn spawn_splash_screen(mut commands: Commands, splash_assets: Res<SplashAssets>) {
     commands.spawn((
@@ -122,7 +122,7 @@ impl ImageNodeFadeInOut {
     }
 }
 
-fn tick_fade_in_out(time: Res<Time>, mut query: Query<&mut ImageNodeFadeInOut>) {
+fn tick_fade_in_out(mut query: Query<&mut ImageNodeFadeInOut>, time: Res<Time>) {
     for mut anim in &mut query {
         anim.t += time.delta_secs();
     }

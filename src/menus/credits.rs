@@ -17,16 +17,22 @@ use bevy_asset_loader::prelude::*;
 use crate::{asset_tracking::AssetState, audio::music, menus::Menu, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Menu::Credits), spawn_credits_menu);
-    app.add_systems(
-        Update,
-        go_back.run_if(in_state(Menu::Credits).and(input_just_pressed(KeyCode::Escape))),
-    );
+    // Add loading states via bevy_asset_loader
     app.add_loading_state(
         LoadingState::new(AssetState::AssetLoading)
             .continue_to_state(AssetState::Next)
             .load_collection::<CreditsAssets>(),
     );
+
+    // Open credits menu
+    app.add_systems(OnEnter(Menu::Credits), spawn_credits_menu);
+
+    // Exit credits menu on pressing Escape
+    app.add_systems(
+        Update,
+        go_back.run_if(in_state(Menu::Credits).and(input_just_pressed(KeyCode::Escape))),
+    );
+    // Start music for credits menu
     app.add_systems(OnEnter(Menu::Credits), start_credits_music);
 }
 

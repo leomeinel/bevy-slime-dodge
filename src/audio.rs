@@ -15,6 +15,7 @@ use bevy::{
 };
 
 pub(super) fn plugin(app: &mut App) {
+    // Apply global volume if it is changed
     app.add_systems(
         Update,
         apply_global_volume.run_if(resource_changed::<GlobalVolume>),
@@ -57,8 +58,8 @@ pub fn sound_effect(handle: Handle<AudioSource>) -> impl Bundle {
 
 /// [`GlobalVolume`] doesn't apply to already-running audio entities, so this system will update them.
 fn apply_global_volume(
-    global_volume: Res<GlobalVolume>,
     mut query: Query<(&PlaybackSettings, &mut AudioSink)>,
+    global_volume: Res<GlobalVolume>,
 ) {
     for (playback, mut sink) in &mut query {
         sink.set_volume(global_volume.volume * playback.volume);

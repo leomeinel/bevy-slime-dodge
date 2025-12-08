@@ -16,7 +16,10 @@ use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use crate::{menus::Menu, screens::Screen, theme::widgets};
 
 pub(super) fn plugin(app: &mut App) {
+    // Open pause menu
     app.add_systems(OnEnter(Menu::Pause), spawn_pause_menu);
+
+    // Exit pause menu on pressing Escape
     app.add_systems(
         Update,
         go_back.run_if(in_state(Menu::Pause).and(input_just_pressed(KeyCode::Escape))),

@@ -22,6 +22,7 @@ mod characters;
 #[cfg(feature = "dev")]
 mod dev_tools;
 mod menus;
+mod rng;
 mod screens;
 mod theme;
 mod worlds;
@@ -64,9 +65,9 @@ impl Plugin for AppPlugin {
 
         // Libraries
         app.add_plugins((
-            RapierPhysicsPlugin::<()>::default(),
-            EntropyPlugin::<WyRand>::default(),
             EnhancedInputPlugin,
+            EntropyPlugin::<WyRand>::default(),
+            RapierPhysicsPlugin::<()>::default(),
         ));
 
         // Add other plugins.
@@ -77,6 +78,7 @@ impl Plugin for AppPlugin {
             #[cfg(feature = "dev")]
             dev_tools::plugin,
             menus::plugin,
+            rng::plugin,
             screens::plugin,
             theme::plugin,
             worlds::plugin,

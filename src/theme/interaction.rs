@@ -14,12 +14,17 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, apply_interaction_palette);
+    // Add loading states via bevy_asset_loader
     app.add_loading_state(
         LoadingState::new(AssetState::AssetLoading)
             .continue_to_state(AssetState::Next)
             .load_collection::<InteractionAssets>(),
     );
+
+    // Visualize ui interactions with color palette
+    app.add_systems(Update, apply_interaction_palette);
+
+    // Play sound effects
     app.add_observer(play_on_hover_sound_effect);
     app.add_observer(play_on_click_sound_effect);
 }
@@ -60,31 +65,31 @@ struct InteractionAssets {
 }
 
 fn play_on_hover_sound_effect(
-    trigger: On<Pointer<Over>>,
+    event: On<Pointer<Over>>,
+    query: Query<(), With<Interaction>>,
     mut commands: Commands,
     interaction_assets: Option<Res<InteractionAssets>>,
-    query: Query<(), With<Interaction>>,
 ) {
     let Some(interaction_assets) = interaction_assets else {
         return;
     };
 
-    if query.contains(trigger.entity) {
+    if query.contains(event.entity) {
         commands.spawn(sound_effect(interaction_assets.hover.clone()));
     }
 }
 
 fn play_on_click_sound_effect(
-    trigger: On<Pointer<Click>>,
+    event: On<Pointer<Click>>,
+    query: Query<(), With<Interaction>>,
     mut commands: Commands,
     interaction_assets: Option<Res<InteractionAssets>>,
-    query: Query<(), With<Interaction>>,
 ) {
     let Some(interaction_assets) = interaction_assets else {
         return;
     };
 
-    if query.contains(trigger.entity) {
+    if query.contains(event.entity) {
         commands.spawn(sound_effect(interaction_assets.click.clone()));
     }
 }

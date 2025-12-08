@@ -14,6 +14,7 @@
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
+    // Initialize asset states
     app.init_state::<AssetState>();
 }
 

@@ -19,8 +19,10 @@ mod settings;
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
+    // Initialize menu states
     app.init_state::<Menu>();
 
+    // Add child plugins
     app.add_plugins((
         credits::plugin,
         main::plugin,

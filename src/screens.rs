@@ -19,8 +19,10 @@ mod title;
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
+    // Initialize main screen states
     app.init_state::<Screen>();
 
+    // Add child plugins
     app.add_plugins((
         gameplay::plugin,
         /*loading::plugin,*/

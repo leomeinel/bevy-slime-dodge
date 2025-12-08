@@ -125,7 +125,7 @@ struct Pause(pub bool);
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
 
-/// Camera that renders the pixel-perfect world to the [`Canvas`].
+/// Camera that renders the pixel-perfect world to the canvas.
 #[derive(Component)]
 struct CanvasCamera;
 
@@ -144,7 +144,7 @@ const RES_HEIGHT: u32 = 180;
 
 /// Scales camera projection to fit the window (integer multiples only).
 ///
-/// Source: https://bevy.org/examples/2d-rendering/pixel-grid-snap/
+/// Source: <https://bevy.org/examples/2d-rendering/pixel-grid-snap/>
 fn fit_canvas(
     mut msgs: MessageReader<WindowResized>,
     mut projection: Single<&mut Projection, With<CanvasCamera>>,
@@ -163,7 +163,7 @@ const CAMERA_DECAY_RATE: f32 = 3.;
 
 /// Update the camera position by tracking the player.
 ///
-/// Source: https://bevy.org/examples/camera/2d-top-down-camera/
+/// Source: <https://bevy.org/examples/camera/2d-top-down-camera/>
 fn update_camera(
     mut camera: Single<&mut Transform, (With<Camera2d>, Without<Player>)>,
     player: Single<&Transform, (With<Player>, Without<Camera2d>)>,

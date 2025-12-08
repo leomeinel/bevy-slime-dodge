@@ -28,6 +28,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_input_context::<Player>();
     app.add_observer(apply_movement);
+    app.add_observer(stop_movement);
 }
 
 #[derive(Debug, InputAction)]
@@ -96,4 +97,13 @@ fn apply_movement(
     mut controller_query: Single<&mut KinematicCharacterController, With<Player>>,
 ) {
     controller_query.translation = Some(movement_event.value * time.delta_secs());
+}
+
+/// Stop movement
+fn stop_movement(
+    movement_event: On<Complete<Movement>>,
+    mut controller_query: Single<&mut KinematicCharacterController, With<Player>>,
+) {
+    println!("{}", movement_event.value);
+    controller_query.translation = Some(Vec2::ZERO);
 }

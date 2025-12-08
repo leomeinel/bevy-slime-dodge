@@ -122,14 +122,14 @@ impl ImageNodeFadeInOut {
     }
 }
 
-fn tick_fade_in_out(time: Res<Time>, mut animation_query: Query<&mut ImageNodeFadeInOut>) {
-    for mut anim in &mut animation_query {
+fn tick_fade_in_out(time: Res<Time>, mut query: Query<&mut ImageNodeFadeInOut>) {
+    for mut anim in &mut query {
         anim.t += time.delta_secs();
     }
 }
 
-fn apply_fade_in_out(mut animation_query: Query<(&ImageNodeFadeInOut, &mut ImageNode)>) {
-    for (anim, mut image) in &mut animation_query {
+fn apply_fade_in_out(mut query: Query<(&ImageNodeFadeInOut, &mut ImageNode)>) {
+    for (anim, mut image) in &mut query {
         image.color.set_alpha(anim.alpha())
     }
 }

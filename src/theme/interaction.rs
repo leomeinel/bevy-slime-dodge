@@ -36,12 +36,12 @@ pub struct InteractionPalette {
 }
 
 fn apply_interaction_palette(
-    mut palette_query: Query<
+    mut query: Query<
         (&Interaction, &InteractionPalette, &mut BackgroundColor),
         Changed<Interaction>,
     >,
 ) {
-    for (interaction, palette, mut background) in &mut palette_query {
+    for (interaction, palette, mut background) in &mut query {
         *background = match interaction {
             Interaction::None => palette.none,
             Interaction::Hovered => palette.hovered,
@@ -63,13 +63,13 @@ fn play_on_hover_sound_effect(
     trigger: On<Pointer<Over>>,
     mut commands: Commands,
     interaction_assets: Option<Res<InteractionAssets>>,
-    interaction_query: Query<(), With<Interaction>>,
+    query: Query<(), With<Interaction>>,
 ) {
     let Some(interaction_assets) = interaction_assets else {
         return;
     };
 
-    if interaction_query.contains(trigger.entity) {
+    if query.contains(trigger.entity) {
         commands.spawn(sound_effect(interaction_assets.hover.clone()));
     }
 }
@@ -78,13 +78,13 @@ fn play_on_click_sound_effect(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
     interaction_assets: Option<Res<InteractionAssets>>,
-    interaction_query: Query<(), With<Interaction>>,
+    query: Query<(), With<Interaction>>,
 ) {
     let Some(interaction_assets) = interaction_assets else {
         return;
     };
 
-    if interaction_query.contains(trigger.entity) {
+    if query.contains(trigger.entity) {
         commands.spawn(sound_effect(interaction_assets.click.clone()));
     }
 }

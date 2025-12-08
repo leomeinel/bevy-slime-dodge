@@ -198,21 +198,21 @@ pub(crate) fn trigger_step_sound_effect<T, A, B>(
     mut commands: Commands,
     assets: If<Res<A>>,
     sound_frames: Res<B>,
-    mut step_query: Query<&T>,
-    mut rng_query: Single<&mut WyRand, With<Rng>>,
+    mut query: Query<&T>,
+    mut rng: Single<&mut WyRand, With<Rng>>,
 ) where
     T: Component<Mutability = Mutable> + MovementAnimation,
     A: Resource + CharacterAssets<Animation = T>,
     B: Resource + SoundFrames,
 {
-    for animation in &mut step_query {
+    for animation in &mut query {
         if *animation.get_state() == MovementAnimationState::Walking
             && animation.changed()
             && sound_frames.get_frames().contains(animation.get_frame())
         {
             let random_step = assets
                 .get_step_sounds()
-                .choose(rng_query.as_mut())
+                .choose(rng.as_mut())
                 .unwrap()
                 .clone();
             commands.spawn(sound_effect(random_step));

@@ -107,15 +107,15 @@ pub(crate) fn player(player_assets: &PlayerAssets) -> impl Bundle {
 fn apply_movement(
     movement_event: On<Fire<Movement>>,
     time: Res<Time>,
-    mut controller_query: Single<&mut KinematicCharacterController, With<Player>>,
+    mut controller: Single<&mut KinematicCharacterController, With<Player>>,
 ) {
-    controller_query.translation = Some(movement_event.value * time.delta_secs());
+    controller.translation = Some(movement_event.value * time.delta_secs());
 }
 
 /// Stop movement
 fn stop_movement(
     _movement_event: On<Complete<Movement>>,
-    mut controller_query: Single<&mut KinematicCharacterController, With<Player>>,
+    mut controller: Single<&mut KinematicCharacterController, With<Player>>,
 ) {
-    controller_query.translation = Some(Vec2::ZERO);
+    controller.translation = Some(Vec2::ZERO);
 }

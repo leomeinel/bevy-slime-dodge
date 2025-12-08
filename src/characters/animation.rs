@@ -13,59 +13,89 @@
 //! - [Sprite animation](https://github.com/bevyengine/bevy/blob/latest/examples/2d/sprite_animation.rs)
 //! - [Timers](https://github.com/bevyengine/bevy/blob/latest/examples/time/timers.rs)
 
-use bevy::prelude::*;
+pub(crate) mod npc;
+pub(crate) mod player;
+
+use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_prng::WyRand;
 use bevy_rand::{global::GlobalRng, traits::ForkableSeed as _};
 use bevy_rapier2d::prelude::*;
 use rand::seq::IndexedRandom as _;
 use std::time::Duration;
 
-use crate::{AppSystems, PausableSystems, audio::sound_effect, characters::player::PlayerAssets};
+use crate::{audio::sound_effect, characters::CharacterAssets};
 
 pub(super) fn plugin(app: &mut App) {
     // Setup rng source
     app.add_systems(Startup, setup_rng);
 
-    // Animate and play sound effects based on controls.
-    app.add_systems(
-        Update,
-        (
-            update_animation_timer.in_set(AppSystems::TickTimers),
-            (
-                update_animation_movement,
-                update_animation_atlas,
-                trigger_step_sound_effect,
-            )
-                .chain()
-                .in_set(AppSystems::Update),
-        )
-            .in_set(PausableSystems),
-    );
+    app.add_plugins((npc::plugin, player::plugin));
+}
+
+#[derive(Reflect, PartialEq, Clone, Copy)]
+pub enum MovementAnimationState {
+    Idling,
+    Walking,
 }
 
 #[derive(Component)]
-struct Rng;
+pub(crate) struct Rng;
 
 fn setup_rng(mut commands: Commands, mut global: Single<&mut WyRand, With<GlobalRng>>) {
     commands.spawn((Rng, global.fork_seed()));
 }
 
+pub(crate) trait MovementAnimation {
+    /// The number of idle frames.
+    const IDLE_FRAMES: usize = 1;
+    /// The duration of each idle frame.
+    const IDLE_INTERVAL: Duration = Duration::from_millis(500);
+    /// The number of walking frames.
+    const WALKING_FRAMES: usize = 8;
+    /// The duration of each walking frame.
+    const WALKING_INTERVAL: Duration = Duration::from_millis(100);
+
+    fn idling() -> Self;
+
+    fn walking() -> Self;
+
+    fn new() -> Self;
+
+    /// Update animation timers.
+    fn update_timer(&mut self, delta: Duration);
+
+    /// Update animation state if it changes.
+    fn update_state(&mut self, state: MovementAnimationState);
+
+    /// Whether animation changed this tick.
+    fn changed(&self) -> bool;
+
+    /// Return sprite index in the atlas.
+    fn get_atlas_index(&self) -> usize;
+
+    fn get_frame(&self) -> usize;
+    fn get_state(&self) -> MovementAnimationState;
+}
+
+pub(crate) trait SoundFrames {
+    fn get_frames(&self) -> &Vec<usize>;
+}
+
 /// Update the animation timer.
-fn update_animation_timer(time: Res<Time>, mut query: Query<&mut PlayerAnimation>) {
+pub(crate) fn update_animation_timer<T: Component<Mutability = Mutable> + MovementAnimation>(
+    time: Res<Time>,
+    mut query: Query<&mut T>,
+) {
     for mut animation in &mut query {
         animation.update_timer(time.delta());
     }
 }
 
 /// Update the sprite direction and animation state (idling/walking).
-fn update_animation_movement(
-    mut player_query: Query<(
-        &KinematicCharacterController,
-        &mut Sprite,
-        &mut PlayerAnimation,
-    )>,
+pub(crate) fn update_animation_movement<T: Component<Mutability = Mutable> + MovementAnimation>(
+    mut query: Query<(&KinematicCharacterController, &mut Sprite, &mut T)>,
 ) {
-    for (controller, mut sprite, mut animation) in &mut player_query {
+    for (controller, mut sprite, mut animation) in &mut query {
         let Some(intent) = controller.translation else {
             return;
         };
@@ -75,16 +105,18 @@ fn update_animation_movement(
         }
 
         let animation_state = if intent == Vec2::ZERO {
-            PlayerAnimationState::Idling
+            MovementAnimationState::Idling
         } else {
-            PlayerAnimationState::Walking
+            MovementAnimationState::Walking
         };
         animation.update_state(animation_state);
     }
 }
 
 /// Update the texture atlas to reflect changes in the animation.
-fn update_animation_atlas(mut query: Query<(&PlayerAnimation, &mut Sprite)>) {
+pub(crate) fn update_animation_atlas<T: Component<Mutability = Mutable> + MovementAnimation>(
+    mut query: Query<(&T, &mut Sprite)>,
+) {
     for (animation, mut sprite) in &mut query {
         let Some(atlas) = sprite.texture_atlas.as_mut() else {
             continue;
@@ -95,108 +127,32 @@ fn update_animation_atlas(mut query: Query<(&PlayerAnimation, &mut Sprite)>) {
     }
 }
 
-/// If the player is moving, play a step sound effect synchronized with the
+/// If the character is moving, play a step sound effect synchronized with the
 /// animation.
-fn trigger_step_sound_effect(
+pub(crate) fn trigger_step_sound_effect<
+    T: Component<Mutability = Mutable> + MovementAnimation,
+    A: Resource + CharacterAssets<Animation = T>,
+    B: Resource + SoundFrames,
+>(
     mut commands: Commands,
-    player_assets: If<Res<PlayerAssets>>,
-    mut step_query: Query<&PlayerAnimation>,
+    assets: If<Res<A>>,
+    animation_frames: Res<B>,
+    mut step_query: Query<&T>,
     mut rng_query: Single<&mut WyRand, With<Rng>>,
 ) {
     for animation in &mut step_query {
-        if animation.state == PlayerAnimationState::Walking
+        if animation.get_state() == MovementAnimationState::Walking
             && animation.changed()
-            && (animation.frame == 5 || animation.frame == 9)
+            && animation_frames
+                .get_frames()
+                .contains(&animation.get_frame())
         {
-            let random_step = player_assets
-                .steps
+            let random_step = assets
+                .get_step_sounds()
                 .choose(rng_query.as_mut())
                 .unwrap()
                 .clone();
             commands.spawn(sound_effect(random_step));
-        }
-    }
-}
-
-/// Component that tracks player's animation state.
-/// It is tightly bound to the texture atlas we use.
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-pub struct PlayerAnimation {
-    timer: Timer,
-    frame: usize,
-    state: PlayerAnimationState,
-}
-
-#[derive(Reflect, PartialEq)]
-pub enum PlayerAnimationState {
-    Idling,
-    Walking,
-}
-
-impl PlayerAnimation {
-    /// The number of idle frames.
-    const IDLE_FRAMES: usize = 1;
-    /// The duration of each idle frame.
-    const IDLE_INTERVAL: Duration = Duration::from_millis(500);
-    /// The number of walking frames.
-    const WALKING_FRAMES: usize = 8;
-    /// The duration of each walking frame.
-    const WALKING_INTERVAL: Duration = Duration::from_millis(100);
-
-    fn idling() -> Self {
-        Self {
-            timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::Idling,
-        }
-    }
-
-    fn walking() -> Self {
-        Self {
-            timer: Timer::new(Self::WALKING_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::Walking,
-        }
-    }
-
-    pub fn new() -> Self {
-        Self::idling()
-    }
-
-    /// Update animation timers.
-    pub fn update_timer(&mut self, delta: Duration) {
-        self.timer.tick(delta);
-        if !self.timer.is_finished() {
-            return;
-        }
-        self.frame = (self.frame + 1)
-            % match self.state {
-                PlayerAnimationState::Idling => Self::IDLE_FRAMES,
-                PlayerAnimationState::Walking => Self::WALKING_FRAMES,
-            };
-    }
-
-    /// Update animation state if it changes.
-    pub fn update_state(&mut self, state: PlayerAnimationState) {
-        if self.state != state {
-            match state {
-                PlayerAnimationState::Idling => *self = Self::idling(),
-                PlayerAnimationState::Walking => *self = Self::walking(),
-            }
-        }
-    }
-
-    /// Whether animation changed this tick.
-    pub fn changed(&self) -> bool {
-        self.timer.is_finished()
-    }
-
-    /// Return sprite index in the atlas.
-    pub fn get_atlas_index(&self) -> usize {
-        match self.state {
-            PlayerAnimationState::Idling => self.frame,
-            PlayerAnimationState::Walking => 1 + self.frame,
         }
     }
 }

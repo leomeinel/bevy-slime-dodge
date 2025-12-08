@@ -15,8 +15,15 @@ pub(crate) mod player;
 
 use bevy::prelude::*;
 
+use crate::characters::animation::MovementAnimation;
+
 /// Plugin
 pub(super) fn plugin(app: &mut App) {
     // Add plugins
     app.add_plugins((animation::plugin, npc::plugin, player::plugin));
+}
+
+pub(crate) trait CharacterAssets {
+    type Animation: MovementAnimation;
+    fn get_step_sounds(&self) -> &Vec<Handle<AudioSource>>;
 }

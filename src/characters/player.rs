@@ -16,13 +16,19 @@ use bevy_asset_loader::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use crate::{asset_tracking::AssetStates, characters::animation::PlayerAnimation};
+use crate::{
+    asset_tracking::AssetState,
+    characters::{
+        CharacterAssets,
+        animation::{MovementAnimation as _, player::PlayerAnimation},
+    },
+};
 
 /// Plugin
 pub(super) fn plugin(app: &mut App) {
     app.add_loading_state(
-        LoadingState::new(AssetStates::AssetLoading)
-            .continue_to_state(AssetStates::Next)
+        LoadingState::new(AssetState::AssetLoading)
+            .continue_to_state(AssetState::Next)
             .load_collection::<PlayerAssets>(),
     );
 
@@ -45,7 +51,7 @@ pub struct PlayerAssets {
         ),
         collection(typed)
     )]
-    pub(crate) steps: Vec<Handle<AudioSource>>,
+    pub(crate) step_sounds: Vec<Handle<AudioSource>>,
 
     #[asset(texture_atlas_layout(tile_size_x = 24, tile_size_y = 24, columns = 9, rows = 1))]
     pub(crate) sprite_sheet: Handle<TextureAtlasLayout>,
@@ -54,12 +60,19 @@ pub struct PlayerAssets {
     pub(crate) image: Handle<Image>,
 }
 
+impl CharacterAssets for PlayerAssets {
+    type Animation = PlayerAnimation;
+    fn get_step_sounds(&self) -> &Vec<Handle<AudioSource>> {
+        &self.step_sounds
+    }
+}
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 pub(crate) struct Player;
 
 /// The player character.
-pub fn player(player_assets: &PlayerAssets) -> impl Bundle {
+pub(crate) fn player(player_assets: &PlayerAssets) -> impl Bundle {
     let player_animation = PlayerAnimation::new();
 
     (

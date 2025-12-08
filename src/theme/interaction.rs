@@ -9,15 +9,15 @@
  * Heavily inspired by: https://github.com/TheBevyFlock/bevy_new_2d
  */
 
-use crate::{asset_tracking::AssetStates, audio::sound_effect};
+use crate::{asset_tracking::AssetState, audio::sound_effect};
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, apply_interaction_palette);
     app.add_loading_state(
-        LoadingState::new(AssetStates::AssetLoading)
-            .continue_to_state(AssetStates::Next)
+        LoadingState::new(AssetState::AssetLoading)
+            .continue_to_state(AssetState::Next)
             .load_collection::<InteractionAssets>(),
     );
     app.add_observer(play_on_hover_sound_effect);

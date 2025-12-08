@@ -14,17 +14,20 @@ use bevy_asset_loader::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    asset_tracking::AssetStates,
+    asset_tracking::AssetState,
     audio::music,
-    characters::player::{PlayerAssets, player},
+    characters::{
+        npc::{SlimeAssets, slime},
+        player::{PlayerAssets, player},
+    },
     screens::Screen,
 };
 
 /// Plugin
 pub(super) fn plugin(app: &mut App) {
     app.add_loading_state(
-        LoadingState::new(AssetStates::AssetLoading)
-            .continue_to_state(AssetStates::Next)
+        LoadingState::new(AssetState::AssetLoading)
+            .continue_to_state(AssetState::Next)
             .load_collection::<LevelAssets>(),
     );
 }
@@ -44,6 +47,7 @@ pub(crate) fn spawn_level(
     mut commands: Commands,
     level_assets: Res<LevelAssets>,
     player_assets: Res<PlayerAssets>,
+    slime_assets: Res<SlimeAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
@@ -56,6 +60,7 @@ pub(crate) fn spawn_level(
         DespawnOnExit(Screen::Gameplay),
         children![
             player(&player_assets),
+            slime(&slime_assets),
             (
                 Name::new("Gameplay Music"),
                 music(level_assets.music.clone())

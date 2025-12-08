@@ -14,7 +14,7 @@
 use bevy::{ecs::spawn::SpawnIter, input::common_conditions::input_just_pressed, prelude::*};
 use bevy_asset_loader::prelude::*;
 
-use crate::{asset_tracking::AssetStates, audio::music, menus::Menu, theme::prelude::*};
+use crate::{asset_tracking::AssetState, audio::music, menus::Menu, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Credits), spawn_credits_menu);
@@ -23,8 +23,8 @@ pub(super) fn plugin(app: &mut App) {
         go_back.run_if(in_state(Menu::Credits).and(input_just_pressed(KeyCode::Escape))),
     );
     app.add_loading_state(
-        LoadingState::new(AssetStates::AssetLoading)
-            .continue_to_state(AssetStates::Next)
+        LoadingState::new(AssetState::AssetLoading)
+            .continue_to_state(AssetState::Next)
             .load_collection::<CreditsAssets>(),
     );
     app.add_systems(OnEnter(Menu::Credits), start_credits_music);

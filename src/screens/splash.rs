@@ -14,22 +14,22 @@
 use bevy::{color::palettes::tailwind, input::common_conditions::input_just_pressed, prelude::*};
 use bevy_asset_loader::prelude::*;
 
-use crate::{AppSystems, asset_tracking::AssetStates, screens::Screen, theme::prelude::*};
+use crate::{AppSystems, asset_tracking::AssetState, screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_loading_state(
-        LoadingState::new(AssetStates::AssetLoading)
-            .continue_to_state(AssetStates::Next)
+        LoadingState::new(AssetState::AssetLoading)
+            .continue_to_state(AssetState::Next)
             .load_collection::<SplashAssets>(),
     );
 
-    app.add_systems(OnEnter(AssetStates::Next), enter_splash_screen);
+    app.add_systems(OnEnter(AssetState::Next), enter_splash_screen);
 
     // Spawn splash screen.
     app.insert_resource(ClearColor(SPLASH_BACKGROUND_COLOR.into()));
     app.add_systems(
         OnEnter(Screen::Splash),
-        spawn_splash_screen.run_if(in_state(AssetStates::Next)),
+        spawn_splash_screen.run_if(in_state(AssetState::Next)),
     );
 
     // Animate splash screen.

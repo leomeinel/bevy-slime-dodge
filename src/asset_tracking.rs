@@ -14,11 +14,11 @@
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.init_state::<AssetStates>();
+    app.init_state::<AssetState>();
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
-pub(crate) enum AssetStates {
+pub(crate) enum AssetState {
     #[default]
     AssetLoading,
     Next,

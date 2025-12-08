@@ -11,19 +11,26 @@
 
 //! A splash screen that plays briefly at startup.
 
-use bevy::{
-    color::palettes::tailwind,
-    image::{ImageLoaderSettings, ImageSampler},
-    input::common_conditions::input_just_pressed,
-    prelude::*,
-};
+use bevy::{color::palettes::tailwind, input::common_conditions::input_just_pressed, prelude::*};
+use bevy_asset_loader::prelude::*;
 
-use crate::{AppSystems, screens::Screen, theme::prelude::*};
+use crate::{AppSystems, asset_tracking::AssetStates, screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
+    app.add_loading_state(
+        LoadingState::new(AssetStates::AssetLoading)
+            .continue_to_state(AssetStates::Next)
+            .load_collection::<SplashAssets>(),
+    );
+
+    app.add_systems(OnEnter(AssetStates::Next), enter_splash_screen);
+
     // Spawn splash screen.
     app.insert_resource(ClearColor(SPLASH_BACKGROUND_COLOR.into()));
-    app.add_systems(OnEnter(Screen::Splash), spawn_splash_screen);
+    app.add_systems(
+        OnEnter(Screen::Splash),
+        spawn_splash_screen.run_if(in_state(AssetStates::Next)),
+    );
 
     // Animate splash screen.
     app.add_systems(
@@ -55,12 +62,23 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+#[derive(AssetCollection, Resource)]
+struct SplashAssets {
+    #[asset(path = "images/ui/splash.webp")]
+    #[asset(image(sampler(filter = linear)))]
+    splash: Handle<Image>,
+}
+
 /// rgb(38, 38, 38)
 const SPLASH_BACKGROUND_COLOR: Srgba = tailwind::NEUTRAL_800;
 const SPLASH_DURATION_SECS: f32 = 1.8;
 const SPLASH_FADE_DURATION_SECS: f32 = 0.6;
 
-fn spawn_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn enter_splash_screen(mut next_state: ResMut<NextState<Screen>>) {
+    next_state.set(Screen::Splash);
+}
+
+fn spawn_splash_screen(mut commands: Commands, splash_assets: Res<SplashAssets>) {
     commands.spawn((
         widgets::common::ui_root("Splash Screen"),
         BackgroundColor(SPLASH_BACKGROUND_COLOR.into()),
@@ -72,16 +90,7 @@ fn spawn_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
                 width: percent(70),
                 ..default()
             },
-            ImageNode::new(asset_server.load_with_settings(
-                // This should be an embedded asset for instant loading, but that is
-                // currently [broken on Windows Wasm builds](https://github.com/bevyengine/bevy/issues/14246).
-                "images/ui/splash.webp",
-                |settings: &mut ImageLoaderSettings| {
-                    // Make an exception for the splash image in case
-                    // `ImagePlugin::default_nearest()` is used for pixel art.
-                    settings.sampler = ImageSampler::linear();
-                },
-            )),
+            ImageNode::new(splash_assets.splash.clone()),
             ImageNodeFadeInOut {
                 total_duration: SPLASH_DURATION_SECS,
                 fade_duration: SPLASH_FADE_DURATION_SECS,

@@ -37,6 +37,9 @@ pub(super) fn plugin(app: &mut App) {
 
     // Add child plugins
     app.add_plugins((npc::plugin, player::plugin));
+
+    // Add plugin for sprite animation
+    app.add_plugins(SpritesheetAnimationPlugin);
 }
 
 /// Animation data deserialized from a ron file as a generic
@@ -69,7 +72,7 @@ where
 pub(crate) struct Animations<T> {
     pub(crate) sprite: Sprite,
     pub(crate) idle: Handle<Animation>,
-    pub(crate) run: Handle<Animation>,
+    pub(crate) walk: Handle<Animation>,
     _phantom: PhantomData<T>,
 }
 
@@ -85,10 +88,10 @@ fn setup_rng(mut global: Single<&mut WyRand, With<GlobalRng>>, mut commands: Com
 /// Setup the [`Animations`] struct and add animations
 fn setup<T, A>(
     mut commands: Commands,
-    animation_data: Res<Assets<AnimationData<T>>>,
+    data: Res<Assets<AnimationData<T>>>,
     mut atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     mut global_animations: ResMut<Assets<Animation>>,
-    animation_handle: Res<AnimationHandle<T>>,
+    handle: Res<AnimationHandle<T>>,
     assets: Res<A>,
     images: Res<Assets<Image>>,
 ) where
@@ -96,14 +99,14 @@ fn setup<T, A>(
     A: CharacterAssets + Resource,
 {
     // Get animation from `AnimationData` with `AnimationHandle`
-    let Some(animation_data) = animation_data.get(animation_handle.0.id()) else {
+    let Some(data) = data.get(handle.0.id()) else {
         return;
     };
     // Set sprite sheet and generate sprite from it
     let sprite_sheet = Spritesheet::new(
         &assets.get_image().clone(),
-        animation_data.atlas_columns,
-        animation_data.atlas_rows,
+        data.atlas_columns,
+        data.atlas_rows,
     );
     let sprite = sprite_sheet
         .with_loaded_image(&images)
@@ -113,26 +116,26 @@ fn setup<T, A>(
     // Idle animation
     let idle_animation = sprite_sheet
         .create_animation()
-        .add_horizontal_strip(0, 0, animation_data.idle_frames)
-        .set_clip_duration(AnimationDuration::PerFrame(animation_data.idle_interval_ms))
+        .add_horizontal_strip(0, 0, data.idle_frames)
+        .set_clip_duration(AnimationDuration::PerFrame(data.idle_interval_ms))
         .set_repetitions(AnimationRepeat::Loop)
         .build();
     let idle = global_animations.add(idle_animation);
 
-    // Run animation
-    let run_animation = sprite_sheet
+    // Walk animation
+    let walk_animation = sprite_sheet
         .create_animation()
-        .add_horizontal_strip(0, 1, animation_data.move_frames)
-        .set_clip_duration(AnimationDuration::PerFrame(animation_data.move_interval_ms))
+        .add_horizontal_strip(0, 1, data.move_frames)
+        .set_clip_duration(AnimationDuration::PerFrame(data.move_interval_ms))
         .set_repetitions(AnimationRepeat::Loop)
         .build();
-    let run = global_animations.add(run_animation);
+    let walk = global_animations.add(walk_animation);
 
     // Add to `Animations`
     commands.insert_resource(Animations::<T> {
         sprite,
         idle,
-        run,
+        walk,
         ..default()
     });
 }
@@ -168,9 +171,9 @@ fn update<T>(
             sprite.flip_x = dx < 0.;
         }
 
-        // Run animation
-        if animation.animation != animations.run {
-            animation.switch(animations.run.clone());
+        // Walk animation
+        if animation.animation != animations.walk {
+            animation.switch(animations.walk.clone());
         }
     }
 }
@@ -180,8 +183,8 @@ fn update_sound<T, A>(
     mut rng: Single<&mut WyRand, With<Rng>>,
     mut query: Query<&mut SpritesheetAnimation, With<T>>,
     mut commands: Commands,
-    animation_data: Res<Assets<AnimationData<T>>>,
-    animation_handle: Res<AnimationHandle<T>>,
+    data: Res<Assets<AnimationData<T>>>,
+    handle: Res<AnimationHandle<T>>,
     animations: Res<Animations<T>>,
     assets: If<Res<A>>,
 ) where
@@ -189,16 +192,14 @@ fn update_sound<T, A>(
     A: CharacterAssets + Resource,
 {
     // Get animation from `AnimationData` with `AnimationHandle`
-    let Some(animation_data) = animation_data.get(animation_handle.0.id()) else {
+    let Some(data) = data.get(handle.0.id()) else {
         return;
     };
 
     for animation in &mut query {
-        // Continue if animation is not run or we are not on the correct frame
-        if animation.animation != animations.run
-            || !animation_data
-                .step_sound_frames
-                .contains(&animation.progress.frame)
+        // Continue if animation is not walk or we are not on the correct frame
+        if animation.animation != animations.walk
+            || !data.step_sound_frames.contains(&animation.progress.frame)
         {
             continue;
         }

@@ -16,6 +16,7 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     audio::music,
     characters::{
+        CollisionData, CollisionHandle,
         animations::Animations,
         npc::{Slime, slime},
         player::{Player, player},
@@ -50,10 +51,15 @@ pub(crate) struct ArenaAssets {
     music: Handle<AudioSource>,
 }
 
-// rgb(107, 114, 128)
+/// rgb(107, 114, 128)
 const GROUND_COLOR: Srgba = tailwind::GRAY_500;
-// rgb(17, 24, 39)
+/// Width and height of the ground
+const GROUND_WIDTH_HEIGHT: f32 = 640.;
+
+/// rgb(17, 24, 39)
 const BORDER_COLOR: Srgba = tailwind::GRAY_900;
+/// Height of the border
+const BORDER_HEIGHT: f32 = 20.;
 
 /// Spawn arena with player, enemies and objects
 pub(crate) fn spawn_arena(
@@ -62,25 +68,37 @@ pub(crate) fn spawn_arena(
     mut meshes: ResMut<Assets<Mesh>>,
     level_assets: Res<ArenaAssets>,
     player_animations: Res<Animations<Player>>,
+    player_collision_data: Res<Assets<CollisionData<Player>>>,
+    player_collision_handle: Res<CollisionHandle<Player>>,
     slime_animations: Res<Animations<Slime>>,
+    slime_collision_data: Res<Assets<CollisionData<Slime>>>,
+    slime_collision_handle: Res<CollisionHandle<Slime>>,
 ) {
     commands.spawn((
         Name::new("Level"),
-        Mesh2d(meshes.add(Rectangle::new(640., 640.))),
+        Mesh2d(meshes.add(Rectangle::new(GROUND_WIDTH_HEIGHT, GROUND_WIDTH_HEIGHT))),
         MeshMaterial2d(materials.add(Into::<Color>::into(GROUND_COLOR))),
         Transform::from_xyz(0., 0., 2.),
         Visibility::default(),
         DespawnOnExit(Screen::Gameplay),
         children![
-            player(&player_animations),
-            slime(&slime_animations),
+            player(
+                &player_animations,
+                &player_collision_data,
+                &player_collision_handle
+            ),
+            slime(
+                &slime_animations,
+                &slime_collision_data,
+                &slime_collision_handle
+            ),
             (
                 Name::new("Gameplay Music"),
                 music(level_assets.music.clone())
             ),
             border(
                 Transform {
-                    translation: Vec3::new(320. + 10., 0., 3.),
+                    translation: Vec3::new(GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 0., 3.),
                     rotation: Quat::from_rotation_z(std::f32::consts::PI / 2.0),
                     ..default()
                 },
@@ -89,7 +107,7 @@ pub(crate) fn spawn_arena(
             ),
             border(
                 Transform {
-                    translation: Vec3::new(-320. - 10., 0., 3.),
+                    translation: Vec3::new(-GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2., 0., 3.),
                     rotation: Quat::from_rotation_z(std::f32::consts::PI / 2.0),
                     ..default()
                 },
@@ -98,7 +116,7 @@ pub(crate) fn spawn_arena(
             ),
             border(
                 Transform {
-                    translation: Vec3::new(0., 320. + 10., 3.),
+                    translation: Vec3::new(0., GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 3.),
                     ..default()
                 },
                 &mut meshes,
@@ -106,7 +124,7 @@ pub(crate) fn spawn_arena(
             ),
             border(
                 Transform {
-                    translation: Vec3::new(0., -320. - 10., 3.),
+                    translation: Vec3::new(0., -GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2., 3.),
                     ..default()
                 },
                 &mut meshes,
@@ -124,9 +142,15 @@ fn border(
 ) -> impl Bundle {
     (
         RigidBody::Fixed,
-        Collider::cuboid(340.0, 10.0),
+        Collider::cuboid(
+            (GROUND_WIDTH_HEIGHT + BORDER_HEIGHT * 2.) / 2.,
+            BORDER_HEIGHT / 2.,
+        ),
         transform,
-        Mesh2d(meshes.add(Rectangle::new(680., 20.))),
+        Mesh2d(meshes.add(Rectangle::new(
+            GROUND_WIDTH_HEIGHT + BORDER_HEIGHT * 2.,
+            BORDER_HEIGHT,
+        ))),
         MeshMaterial2d(materials.add(Into::<Color>::into(BORDER_COLOR))),
         Visibility::default(),
         DespawnOnExit(Screen::Gameplay),

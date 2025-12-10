@@ -122,3 +122,4 @@ $RECYCLE.BIN/
 
 !Cargo.lock
 /graphics/*.webp
+/scripts/colliders/*.ron

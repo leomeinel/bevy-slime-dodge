@@ -26,11 +26,9 @@ mod screens;
 mod theme;
 
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResized};
-use bevy_enhanced_input::prelude::*;
 use bevy_prng::WyRand;
 use bevy_rand::plugin::EntropyPlugin;
 use bevy_rapier2d::plugin::RapierPhysicsPlugin;
-use bevy_spritesheet_animation::prelude::*;
 
 use crate::characters::player::Player;
 
@@ -64,10 +62,8 @@ impl Plugin for AppPlugin {
 
         // Libraries
         app.add_plugins((
-            EnhancedInputPlugin,
             EntropyPlugin::<WyRand>::default(),
             RapierPhysicsPlugin::<()>::default(),
-            SpritesheetAnimationPlugin,
         ));
 
         // Add other plugins.

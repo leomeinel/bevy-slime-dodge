@@ -51,7 +51,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-/// Deserialize ron file for [`SlimeAnimationData`]
+/// Deserialize ron file for [`AnimationData`]
 fn setup_slime(mut commands: Commands, assets: Res<AssetServer>) {
     let animation_handle =
         AnimationHandle::<Slime>(assets.load("data/characters/npc/slime.animation.ron"));

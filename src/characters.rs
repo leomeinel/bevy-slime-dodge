@@ -13,7 +13,10 @@ pub(crate) mod animations;
 pub(crate) mod npc;
 pub(crate) mod player;
 
-use bevy::prelude::*;
+use std::marker::PhantomData;
+
+use bevy::{prelude::*, reflect::Reflectable};
+use bevy_rapier2d::prelude::Collider;
 
 pub(super) fn plugin(app: &mut App) {
     // Add child plugins
@@ -37,4 +40,42 @@ macro_rules! impl_character_assets {
             }
         }
     };
+}
+
+/// Animation data deserialized from a ron file as a generic
+#[derive(serde::Deserialize, Asset, TypePath)]
+pub(crate) struct CollisionData<T>
+where
+    T: Reflectable,
+{
+    shape: String,
+    width: f32,
+    height: f32,
+    #[serde(skip)]
+    _phantom: PhantomData<T>,
+}
+
+/// Handle for [`CollisionData`] as a generic
+#[derive(Resource)]
+pub(crate) struct CollisionHandle<T>(Handle<CollisionData<T>>)
+where
+    T: Reflectable;
+
+/// Get collsion vertices
+pub(crate) fn get_collider<T>(
+    data: &Res<Assets<CollisionData<T>>>,
+    handle: &Res<CollisionHandle<T>>,
+) -> Collider
+where
+    T: Component + Default + Reflectable,
+{
+    // Get data from `CollisionData` with `CollisionHandle`
+    let data = data.get(handle.0.id()).unwrap();
+
+    match data.shape.as_str() {
+        "ball" => Collider::ball(data.width / 2.),
+        "capsule_x" => Collider::capsule_x(data.height / 6., data.width / 2.),
+        "capsule_y" => Collider::capsule_y(data.height / 6., data.width / 2.),
+        _ => Collider::cuboid(data.width / 2., data.height / 2.),
+    }
 }

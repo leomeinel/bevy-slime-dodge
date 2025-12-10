@@ -13,18 +13,29 @@
 
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
+use bevy_common_assets::ron::RonAssetPlugin;
 use bevy_enhanced_input::prelude::*;
 use bevy_rapier2d::prelude::*;
 use bevy_spritesheet_animation::prelude::*;
 
 use crate::{
-    characters::{CharacterAssets, animations::Animations},
+    characters::{
+        CharacterAssets, CollisionData, CollisionHandle, animations::Animations, get_collider,
+    },
     impl_character_assets,
 };
 
 pub(super) fn plugin(app: &mut App) {
     // Initialize asset state
     app.init_state::<PlayerAssetState>();
+
+    // Add plugin to load ron file
+    app.add_plugins((RonAssetPlugin::<CollisionData<Player>>::new(&[
+        "animation.ron",
+    ]),));
+
+    // Add enhanced input plugin
+    app.add_plugins(EnhancedInputPlugin);
 
     // Add loading states via bevy_asset_loader
     app.add_loading_state(
@@ -35,6 +46,9 @@ pub(super) fn plugin(app: &mut App) {
             )
             .load_collection::<PlayerAssets>(),
     );
+
+    // Setup player
+    app.add_systems(Startup, setup_player);
 
     // Handle bevy_enhanced_input with input context and observers
     // FIXME: This currently can not be paused
@@ -72,8 +86,19 @@ pub(crate) struct Player;
 #[action_output(Vec2)]
 struct Movement;
 
+/// Deserialize ron file for [`CollisionData`]
+fn setup_player(mut commands: Commands, assets: Res<AssetServer>) {
+    let animation_handle =
+        CollisionHandle::<Player>(assets.load("data/characters/player/male.collision.ron"));
+    commands.insert_resource(animation_handle);
+}
+
 /// The player character.
-pub(crate) fn player(animations: &Res<Animations<Player>>) -> impl Bundle {
+pub(crate) fn player(
+    animations: &Res<Animations<Player>>,
+    collision_data: &Res<Assets<CollisionData<Player>>>,
+    collision_handle: &Res<CollisionHandle<Player>>,
+) -> impl Bundle {
     (
         Name::new("Player"),
         Player,
@@ -81,8 +106,9 @@ pub(crate) fn player(animations: &Res<Animations<Player>>) -> impl Bundle {
         SpritesheetAnimation::new(animations.idle.clone()),
         RigidBody::Dynamic,
         GravityScale(0.),
-        Collider::cuboid(12., 12.),
+        get_collider::<Player>(collision_data, collision_handle),
         KinematicCharacterController::default(),
+        LockedAxes::ROTATION_LOCKED,
         actions!(
             Player[(
                 Action::<Movement>::new(),
@@ -99,13 +125,16 @@ pub(crate) fn player(animations: &Res<Animations<Player>>) -> impl Bundle {
     )
 }
 
+/// Multiplier for the walk speed of the player
+const WALK_SPEED: f32 = 0.8;
+
 /// On a fired movement, set translation to the given input
 fn apply_movement(
     event: On<Fire<Movement>>,
     time: Res<Time>,
     mut controller: Single<&mut KinematicCharacterController, With<Player>>,
 ) {
-    controller.translation = Some(event.value * time.delta_secs());
+    controller.translation = Some(event.value * WALK_SPEED * time.delta_secs());
 }
 
 /// On a completed movement, set translation to zero

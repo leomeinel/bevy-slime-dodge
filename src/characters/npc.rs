@@ -11,17 +11,28 @@
 
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
+use bevy_common_assets::ron::RonAssetPlugin;
 use bevy_rapier2d::prelude::*;
 use bevy_spritesheet_animation::prelude::*;
 
 use crate::{
-    characters::{CharacterAssets, animations::Animations},
+    characters::{
+        CharacterAssets, CollisionData, CollisionHandle, animations::Animations, get_collider,
+    },
     impl_character_assets,
 };
 
 pub(super) fn plugin(app: &mut App) {
     // Initialize asset state
     app.init_state::<NpcAssetState>();
+
+    // Add plugin to load ron file
+    app.add_plugins((RonAssetPlugin::<CollisionData<Slime>>::new(&[
+        "animation.ron",
+    ]),));
+
+    // Setup slime
+    app.add_systems(Startup, setup_slime);
 
     // Add loading states via bevy_asset_loader
     app.add_loading_state(
@@ -61,8 +72,19 @@ pub(crate) struct Npc;
 #[derive(Component, Default, Reflect)]
 pub(crate) struct Slime;
 
+/// Deserialize ron file for [`CollisionData`]
+fn setup_slime(mut commands: Commands, assets: Res<AssetServer>) {
+    let animation_handle =
+        CollisionHandle::<Slime>(assets.load("data/characters/npc/slime.collision.ron"));
+    commands.insert_resource(animation_handle);
+}
+
 /// The slime enemy.
-pub(crate) fn slime(animations: &Res<Animations<Slime>>) -> impl Bundle {
+pub(crate) fn slime(
+    animations: &Res<Animations<Slime>>,
+    collision_data: &Res<Assets<CollisionData<Slime>>>,
+    collision_handle: &Res<CollisionHandle<Slime>>,
+) -> impl Bundle {
     (
         Name::new("Slime"),
         Npc,
@@ -71,7 +93,8 @@ pub(crate) fn slime(animations: &Res<Animations<Slime>>) -> impl Bundle {
         SpritesheetAnimation::new(animations.idle.clone()),
         RigidBody::Dynamic,
         GravityScale(0.),
-        Collider::ball(8.),
+        get_collider::<Slime>(collision_data, collision_handle),
         KinematicCharacterController::default(),
+        LockedAxes::ROTATION_LOCKED,
     )
 }

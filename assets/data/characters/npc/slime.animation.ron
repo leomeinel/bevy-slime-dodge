@@ -1,4 +1,4 @@
-(
+AnimationData (
     atlas_columns: 5,
     atlas_rows: 2,
     idle_frames: 3,

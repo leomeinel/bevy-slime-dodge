@@ -61,8 +61,8 @@ pub(crate) struct CollisionHandle<T>(Handle<CollisionData<T>>)
 where
     T: Reflectable;
 
-/// Get collsion vertices
-pub(crate) fn get_collider<T>(
+/// Collider for different shapes
+pub(crate) fn collider<T>(
     data: &Res<Assets<CollisionData<T>>>,
     handle: &Res<CollisionHandle<T>>,
 ) -> Collider
@@ -72,10 +72,23 @@ where
     // Get data from `CollisionData` with `CollisionHandle`
     let data = data.get(handle.0.id()).unwrap();
 
+    let (width, height) = (data.width, data.height);
     match data.shape.as_str() {
-        "ball" => Collider::ball(data.width / 2.),
-        "capsule_x" => Collider::capsule_x(data.height / 6., data.width / 2.),
-        "capsule_y" => Collider::capsule_y(data.height / 6., data.width / 2.),
-        _ => Collider::cuboid(data.width / 2., data.height / 2.),
+        "ball" => Collider::ball(width / 2.),
+        "capsule_x" => Collider::capsule_x(capsule_height(height, width), height / 2.),
+        "capsule_y" => Collider::capsule_y(capsule_height(width, height), width / 2.),
+        _ => Collider::cuboid(width / 2., height / 2.),
+    }
+}
+
+/// Correct height parameter for [`Collider::capsule_x`]/[`Collider::capsule_y`]
+///
+/// We are returning 0. if the standing width is smaller than the standing height because that essentially makes the capsule a ball,
+/// which is a better collision than an incorrect capsule.
+fn capsule_height(standing_width: f32, standing_height: f32) -> f32 {
+    if standing_width < standing_height {
+        (standing_height - standing_width) / 2.
+    } else {
+        0.
     }
 }

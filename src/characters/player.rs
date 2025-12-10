@@ -20,7 +20,7 @@ use bevy_spritesheet_animation::prelude::*;
 
 use crate::{
     characters::{
-        CharacterAssets, CollisionData, CollisionHandle, animations::Animations, get_collider,
+        CharacterAssets, CollisionData, CollisionHandle, animations::Animations, collider,
     },
     impl_character_assets,
 };
@@ -106,7 +106,7 @@ pub(crate) fn player(
         SpritesheetAnimation::new(animations.idle.clone()),
         RigidBody::Dynamic,
         GravityScale(0.),
-        get_collider::<Player>(collision_data, collision_handle),
+        collider::<Player>(collision_data, collision_handle),
         KinematicCharacterController::default(),
         LockedAxes::ROTATION_LOCKED,
         actions!(

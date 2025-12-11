@@ -24,6 +24,10 @@ This repository is not entirely licensed as Apache-2.0.
 - [wasm-server-runner](https://crates.io/crates/wasm-server-runner)
 - [yq](https://archlinux.org/packages/extra/any/yq/)
 
+### Developing
+
+- [cargo-cache](https://crates.io/crates/cargo-cache)
+
 # Credits
 
 | Contribution       | Author(s)                                                                                                                                                                                                                                                 |

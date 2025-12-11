@@ -22,9 +22,11 @@ use crate::{
     AppSystems, PausableSystems, Pause,
     animations::{AnimationController, AnimationState, AnimationTimer, Animations},
     characters::{
-        CharacterAssets, CollisionData, CollisionHandle, JumpTimer, collider, tick_jump_timer,
+        CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement, collider,
+        tick_jump_timer,
     },
     impl_character_assets,
+    utils::maths::ease_out_quad,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -52,19 +54,24 @@ pub(super) fn plugin(app: &mut App) {
     // Setup player
     app.add_systems(Startup, setup_player);
 
+    // Jump or stop jump depending on timer
     app.add_systems(
         Update,
-        stop_jump
-            .after(tick_jump_timer)
-            .in_set(AppSystems::Update)
-            .in_set(PausableSystems),
+        (
+            apply_jump
+                .after(tick_jump_timer)
+                .in_set(AppSystems::Update)
+                .in_set(PausableSystems),
+            limit_jump.after(tick_jump_timer),
+        )
+            .chain(),
     );
 
     // Handle bevy_enhanced_input with input context and observers
     app.add_input_context::<Player>();
-    app.add_observer(apply_movement);
-    app.add_observer(stop_movement);
-    app.add_observer(apply_jump);
+    app.add_observer(apply_walk);
+    app.add_observer(stop_walk);
+    app.add_observer(set_jump);
 }
 
 /// Asset state that tracks asset loading
@@ -91,10 +98,10 @@ impl_character_assets!(PlayerAssets);
 #[reflect(Component)]
 pub(crate) struct Player;
 
-/// Movement marker
+/// Walk marker
 #[derive(Debug, InputAction)]
 #[action_output(Vec2)]
-struct Movement;
+struct Walk;
 
 /// Jump marker
 #[derive(Debug, InputAction)]
@@ -108,8 +115,8 @@ fn setup_player(mut commands: Commands, assets: Res<AssetServer>) {
     commands.insert_resource(animation_handle);
 }
 
-/// Movement velocity of the player
-const MOVEMENT_VELOCITY: f32 = 100.;
+/// Walking speed of the player
+const WALK_SPEED: f32 = 80.;
 
 /// The player character.
 pub(crate) fn player(
@@ -128,16 +135,16 @@ pub(crate) fn player(
         collider::<Player>(collision_data, collision_handle),
         KinematicCharacterController::default(),
         LockedAxes::ROTATION_LOCKED,
-        JumpTimer::default(),
+        Movement::default(),
         AnimationTimer(Timer::from_seconds(animation_delay, TimerMode::Once)),
         AnimationController::default(),
         actions!(
             Player[
                 (
-                    Action::<Movement>::new(),
+                    Action::<Walk>::new(),
                     DeadZone::default(),
                     SmoothNudge::default(),
-                    Scale::splat(MOVEMENT_VELOCITY),
+                    Scale::splat(WALK_SPEED),
                     Bindings::spawn((
                         Cardinal::arrows(),
                         Cardinal::wasd_keys(),
@@ -153,11 +160,15 @@ pub(crate) fn player(
     )
 }
 
-/// On a fired movement, set translation to the given input
-fn apply_movement(
-    event: On<Fire<Movement>>,
+/// On a fired walk, set translation to the given input
+fn apply_walk(
+    event: On<Fire<Walk>>,
     controllers: Single<
-        (&mut AnimationController, &mut KinematicCharacterController),
+        (
+            &mut AnimationController,
+            &mut KinematicCharacterController,
+            &mut Movement,
+        ),
         With<Player>,
     >,
     pause: Res<State<Pause>>,
@@ -168,90 +179,130 @@ fn apply_movement(
         return;
     }
 
-    // Assign controllers
-    let (mut animation_controller, mut character_controller) = controllers.into_inner();
+    let (mut animation_controller, mut character_controller, mut movement) =
+        controllers.into_inner();
+
+    // Return if we are jumping
+    let state = animation_controller.state;
+    if state == AnimationState::Jump || state == AnimationState::Fall {
+        return;
+    }
 
     // Apply movement from input
-    let translation = event.value * time.delta_secs();
-    animation_controller.state = AnimationState::Movement(translation);
-    character_controller.translation = Some(translation);
+    movement.target = event.value * time.delta_secs();
+    character_controller.translation = Some(movement.target);
+    animation_controller.state = AnimationState::Walk;
 }
 
-/// On a completed movement, set translation to zero
-fn stop_movement(
-    _: On<Complete<Movement>>,
+/// On a completed walk, set translation to zero
+fn stop_walk(
+    _: On<Complete<Walk>>,
     controllers: Single<
-        (&mut AnimationController, &mut KinematicCharacterController),
+        (
+            &mut AnimationController,
+            &mut KinematicCharacterController,
+            &mut Movement,
+        ),
         With<Player>,
     >,
 ) {
-    // Assign controllers
-    let (mut animation_controller, mut character_controller) = controllers.into_inner();
+    let (mut animation_controller, mut character_controller, mut movement) =
+        controllers.into_inner();
 
+    // Return if we are jumping
+    let state = animation_controller.state;
+    if state == AnimationState::Jump || state == AnimationState::Fall {
+        return;
+    }
+
+    // Stop movement
+    movement.target = Vec2::ZERO;
+    character_controller.translation = Some(movement.target);
     animation_controller.state = AnimationState::Idle;
-    character_controller.translation = Some(Vec2::ZERO);
 }
 
-/// Jump velocity of the player
-const JUMP_VELOCITY: f32 = 1.;
-
-/// On a fired jump, move player up
-fn apply_jump(
+// On a fired jump, move player up
+fn set_jump(
     _: On<Fire<Jump>>,
-    controllers: Single<
-        (&mut AnimationController, &mut KinematicCharacterController),
-        With<Player>,
-    >,
+    query: Single<(Entity, &mut AnimationController), With<Player>>,
+    mut commands: Commands,
     pause: Res<State<Pause>>,
 ) {
-    // Return if game is paused or jump has not been pressed
+    // Return if game is paused
     if pause.get().0 {
         return;
     }
 
-    // Assign controllers
-    let (mut animation_controller, mut character_controller) = controllers.into_inner();
+    let (entity, mut animation_controller) = query.into_inner();
 
     // Return if we are already jumping
-    if animation_controller.state == AnimationState::Jump {
+    let state = animation_controller.state;
+    if state == AnimationState::Jump || state == AnimationState::Fall {
         return;
     }
 
-    // Get mutable Some of character_controller's translation or return
-    let Some(ref mut translation) = character_controller.translation else {
-        return;
-    };
-
-    // Apply jump
+    // Set state to jump
+    commands.entity(entity).insert(JumpTimer::default());
     animation_controller.state = AnimationState::Jump;
-    translation.y = JUMP_VELOCITY;
 }
 
-/// On a completed jump, move player down
-fn stop_jump(
+const JUMP_HEIGHT: f32 = 24.;
+
+/// Apply jump
+fn apply_jump(
     query: Single<
         (
             &mut AnimationController,
             &mut KinematicCharacterController,
+            &mut Movement,
             &JumpTimer,
         ),
         With<Player>,
     >,
 ) {
-    // Assign controllers and timer from query
-    let (mut animation_controller, mut character_controller, timer) = query.into_inner();
+    let (animation_controller, mut character_controller, mut movement, timer) = query.into_inner();
+    let state = animation_controller.state;
+
+    // Return if we are already jumping
+    if state != AnimationState::Jump && state != AnimationState::Fall {
+        return;
+    }
+
+    let multiplier = if state == AnimationState::Jump {
+        1.0f32
+    } else {
+        -1.0f32
+    };
+
+    // Apply jump
+    let height = JUMP_HEIGHT * multiplier * ease_out_quad(timer.0.fraction());
+    movement.target.y = height - movement.jump_fall;
+    movement.jump_fall = height;
+    character_controller.translation = Some(movement.target);
+}
+
+/// Limit jump by setting fall after specific time and then switching to walk
+fn limit_jump(
+    query: Single<(Entity, &mut AnimationController, &mut Movement, &JumpTimer), With<Player>>,
+    mut commands: Commands,
+) {
+    let (entity, mut animation_controller, mut movement, timer) = query.into_inner();
 
     // Return if timer has not finished
     if !timer.0.just_finished() {
         return;
     }
 
-    // Get mutable Some of character_controller's translation or return
-    let Some(ref mut translation) = character_controller.translation else {
-        return;
-    };
+    // Reset jump_fall
+    movement.jump_fall = 0.;
 
-    // Apply fall
-    animation_controller.state = AnimationState::Fall;
-    translation.y = -JUMP_VELOCITY;
+    // Set animation states
+    match animation_controller.state {
+        AnimationState::Jump => {
+            commands.entity(entity).insert(JumpTimer::default());
+            animation_controller.state = AnimationState::Fall;
+        }
+        AnimationState::Fall => animation_controller.state = AnimationState::Idle,
+        _ => (),
+    }
 }

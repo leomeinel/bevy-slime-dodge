@@ -65,8 +65,15 @@ pub(crate) struct CollisionHandle<T>(Handle<CollisionData<T>>)
 where
     T: Reflectable;
 
+/// Current data about movement
+#[derive(Component, Default)]
+pub(crate) struct Movement {
+    pub(crate) target: Vec2,
+    jump_fall: f32,
+}
+
 /// Jumping duration in seconds
-const JUMP_DURATION_SECS: f32 = 0.4;
+const JUMP_DURATION_SECS: f32 = 1.;
 
 /// Timer that tracks jumping
 #[derive(Component, Debug, Clone, PartialEq, Reflect)]
@@ -74,7 +81,10 @@ const JUMP_DURATION_SECS: f32 = 0.4;
 struct JumpTimer(Timer);
 impl Default for JumpTimer {
     fn default() -> Self {
-        Self(Timer::from_seconds(JUMP_DURATION_SECS, TimerMode::Once))
+        Self(Timer::from_seconds(
+            JUMP_DURATION_SECS / 2.,
+            TimerMode::Once,
+        ))
     }
 }
 

@@ -25,6 +25,7 @@ mod levels;
 mod menus;
 mod screens;
 mod theme;
+mod utils;
 
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResized};
 use bevy_prng::WyRand;
@@ -156,7 +157,7 @@ fn fit_canvas(
     }
 }
 
-/// How quickly should the camera snap to the desired location.
+/// How quickly should the camera snap to the target location.
 const CAMERA_DECAY_RATE: f32 = 3.;
 
 /// Update the camera position by tracking the player.

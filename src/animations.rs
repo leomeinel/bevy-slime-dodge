@@ -28,7 +28,11 @@ use bevy_rand::{global::GlobalRng, traits::ForkableSeed as _};
 use bevy_spritesheet_animation::prelude::*;
 use rand::seq::IndexedRandom as _;
 
-use crate::{AppSystems, audio::sound_effect, characters::CharacterAssets};
+use crate::{
+    AppSystems,
+    audio::sound_effect,
+    characters::{CharacterAssets, Movement},
+};
 
 pub(super) fn plugin(app: &mut App) {
     // Add rng for animations
@@ -74,7 +78,9 @@ where
 pub(crate) struct Animations<T> {
     pub(crate) sprite: Sprite,
     pub(crate) idle: Handle<Animation>,
-    pub(crate) movement: Handle<Animation>,
+    pub(crate) walk: Handle<Animation>,
+    pub(crate) jump: Handle<Animation>,
+    pub(crate) fall: Handle<Animation>,
     _phantom: PhantomData<T>,
 }
 
@@ -83,7 +89,7 @@ pub(crate) struct Animations<T> {
 pub(crate) enum AnimationState {
     #[default]
     Idle,
-    Movement(Vec2),
+    Walk,
     Jump,
     Fall,
 }
@@ -148,20 +154,42 @@ fn setup<T, A>(
         .build();
     let idle = global_animations.add(idle_animation);
 
-    // Movement animation
-    let movement_animation = sprite_sheet
+    // Walk animation
+    let walk_animation = sprite_sheet
         .create_animation()
         .add_horizontal_strip(0, 1, data.move_frames)
         .set_clip_duration(AnimationDuration::PerFrame(data.move_interval_ms))
         .set_repetitions(AnimationRepeat::Loop)
         .build();
-    let movement = global_animations.add(movement_animation);
+    let walk = global_animations.add(walk_animation);
+
+    // FIXME: Use actual jump animation strip
+    // Jump animation
+    let jump_animation = sprite_sheet
+        .create_animation()
+        .add_horizontal_strip(0, 1, data.move_frames)
+        .set_clip_duration(AnimationDuration::PerFrame(data.move_interval_ms))
+        .set_repetitions(AnimationRepeat::Loop)
+        .build();
+    let jump = global_animations.add(jump_animation);
+
+    // FIXME: Use actual fall animation strip
+    // Fall animation
+    let fall_animation = sprite_sheet
+        .create_animation()
+        .add_horizontal_strip(0, 1, data.move_frames)
+        .set_clip_duration(AnimationDuration::PerFrame(data.move_interval_ms))
+        .set_repetitions(AnimationRepeat::Loop)
+        .build();
+    let fall = global_animations.add(fall_animation);
 
     // Add to `Animations`
     commands.insert_resource(Animations::<T> {
         sprite,
         idle,
-        movement,
+        walk,
+        jump,
+        fall,
         ..default()
     });
 }
@@ -173,6 +201,7 @@ fn update<T>(
             &AnimationController,
             &mut Sprite,
             &mut SpritesheetAnimation,
+            &mut Movement,
             &AnimationTimer,
         ),
         With<T>,
@@ -181,71 +210,43 @@ fn update<T>(
 ) where
     T: Component,
 {
-    for (controller, mut sprite, mut animation, timer) in &mut query {
-        // Continue if timer is not finished
-        if !timer.0.is_finished() {
-            continue;
-        }
-
+    for (controller, mut sprite, mut animation, movement, timer) in &mut query {
         // Reset animation after timer has finished
         if timer.0.just_finished() {
             animation.reset();
         }
 
-        // Set translation to desired translation because we even want to animate if walking against a wall
-        let desired_animation = &controller.state;
+        // Set translation to target translation because we even want to animate if walking against a wall
+        let state = controller.state;
+
+        // Sprite flipping
+        let dx = movement.target.x;
+        if dx != 0. {
+            sprite.flip_x = dx < 0.;
+        }
+
+        // Set speed factor to vector length
+        animation.speed_factor = if state == AnimationState::Walk {
+            movement.target.length()
+        } else {
+            1.
+        };
 
         // Match to current `AnimationState`
-        match desired_animation {
-            AnimationState::Movement(translation) => {
-                // Set speed factor to vector length
-                animation.speed_factor = translation.length();
-
-                if animation.animation == animations.movement {
-                    // Sprite flipping
-                    let dx = translation.x;
-                    if dx != 0. {
-                        sprite.flip_x = dx < 0.;
-                    }
-                    continue;
-                }
-
-                // Switch to movement animation
-                animation.switch(animations.movement.clone())
+        match state {
+            AnimationState::Walk if animation.animation != animations.walk => {
+                animation.switch(animations.walk.clone())
             }
-            _ => {
-                // Reset speed factor
-                animation.speed_factor = 1.;
-
-                // Match again, this avoids code duplication
-                match desired_animation {
-                    AnimationState::Idle => {
-                        if animation.animation == animations.idle {
-                            continue;
-                        }
-
-                        // Switch to idle animation
-                        animation.switch(animations.idle.clone());
-                    }
-                    AnimationState::Jump => {
-                        if animation.animation == animations.idle {
-                            continue;
-                        }
-
-                        // Switch to jump animation
-                        animation.switch(animations.idle.clone());
-                    }
-                    AnimationState::Fall => {
-                        if animation.animation == animations.idle {
-                            continue;
-                        }
-
-                        // Switch to fall animation
-                        animation.switch(animations.idle.clone());
-                    }
-                    _ => unreachable!(),
-                }
+            AnimationState::Idle if animation.animation != animations.idle => {
+                animation.switch(animations.idle.clone())
             }
+            AnimationState::Jump if animation.animation != animations.jump => {
+                animation.switch(animations.jump.clone())
+            }
+            AnimationState::Fall if animation.animation != animations.fall => {
+                animation.switch(animations.fall.clone())
+            }
+            _ => (),
         }
     }
 }
@@ -269,8 +270,8 @@ fn update_sound<T, A>(
     };
 
     for (mut controller, animation) in &mut query {
-        // Continue if animation is not movement or we are not on the correct frame
-        if animation.animation != animations.movement
+        // Continue if animation is not walk or we are not on the correct frame
+        if animation.animation != animations.walk
             || !data.step_sound_frames.contains(&animation.progress.frame)
         {
             // Reset sound_played

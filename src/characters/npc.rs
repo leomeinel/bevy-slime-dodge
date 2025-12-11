@@ -17,7 +17,7 @@ use bevy_spritesheet_animation::prelude::*;
 
 use crate::{
     animations::{AnimationController, AnimationTimer, Animations},
-    characters::{CharacterAssets, CollisionData, CollisionHandle, JumpTimer, collider},
+    characters::{CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement, collider},
     impl_character_assets,
 };
 
@@ -96,6 +96,7 @@ pub(crate) fn slime(
         collider::<Slime>(collision_data, collision_handle),
         KinematicCharacterController::default(),
         LockedAxes::ROTATION_LOCKED,
+        Movement::default(),
         JumpTimer::default(),
         AnimationTimer(Timer::from_seconds(animation_delay, TimerMode::Once)),
         AnimationController::default(),

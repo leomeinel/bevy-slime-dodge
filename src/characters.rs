@@ -15,7 +15,7 @@ pub(crate) mod player;
 use std::marker::PhantomData;
 
 use bevy::{platform::collections::HashMap, prelude::*, reflect::Reflectable};
-use bevy_rapier2d::prelude::Collider;
+use bevy_rapier2d::prelude::*;
 
 use crate::AppSystems;
 

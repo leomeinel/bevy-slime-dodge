@@ -129,7 +129,10 @@ pub(crate) fn player(
         RigidBody::KinematicVelocityBased,
         GravityScale(0.),
         collider::<Player>(collision_data, collision_handle),
-        KinematicCharacterController::default(),
+        KinematicCharacterController {
+            filter_flags: QueryFilterFlags::EXCLUDE_KINEMATIC,
+            ..default()
+        },
         LockedAxes::ROTATION_LOCKED,
         Movement::default(),
         actions!(

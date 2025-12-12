@@ -7,7 +7,9 @@
  * URL: https://www.apache.org/licenses/LICENSE-2.0
  */
 
-//! Overworld-specific behavior.
+//! Arena-specific behavior.
+
+use std::{f32::consts::FRAC_1_SQRT_2, ops::Range};
 
 use bevy::{color::palettes::tailwind, prelude::*};
 use bevy_asset_loader::prelude::*;
@@ -19,9 +21,9 @@ use crate::{
     animations::{AnimationRng, Animations},
     audio::music,
     characters::{
-        CollisionData, CollisionHandle,
-        npc::{Slime, slime},
-        player::{Player, player},
+        CollisionData, CollisionHandle, VisualMap,
+        npc::{Slime, slime, slime_visual},
+        player::{Player, player, player_visual},
     },
     screens::Screen,
 };
@@ -58,15 +60,59 @@ const GROUND_COLOR: Srgba = tailwind::GRAY_500;
 /// Width and height of the ground
 const GROUND_WIDTH_HEIGHT: f32 = 640.;
 
+/// Level position
+const LEVEL_POS: Vec3 = Vec3::new(0., 0., 2.);
+
 /// rgb(17, 24, 39)
 const BORDER_COLOR: Srgba = tailwind::GRAY_900;
-/// Height of the border
+/// Border height
 const BORDER_HEIGHT: f32 = 20.;
+/// 90 degree angle using only const functions
+const QUAT_Z_90: Quat = Quat::from_xyzw(0., 0., FRAC_1_SQRT_2, FRAC_1_SQRT_2);
+/// Border transforms
+const BORDER_TRANSFORMS: [Transform; 4] = [
+    Transform {
+        translation: Vec3::new(GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 0., 3.),
+        rotation: QUAT_Z_90,
+        scale: Vec3::ONE,
+    },
+    Transform {
+        translation: Vec3::new(-GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2., 0., 3.),
+        rotation: QUAT_Z_90,
+        scale: Vec3::ONE,
+    },
+    Transform {
+        translation: Vec3::new(0., GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 3.),
+        rotation: Quat::IDENTITY,
+        scale: Vec3::ONE,
+    },
+    Transform {
+        translation: Vec3::new(0., -GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2., 3.),
+        rotation: Quat::IDENTITY,
+        scale: Vec3::ONE,
+    },
+];
+
+/// Slime positions
+const SLIME_POSITIONS: [Vec3; 4] = [
+    Vec3::new(40., 0., 4.),
+    Vec3::new(-40., 0., 4.),
+    Vec3::new(0., 40., 4.),
+    Vec3::new(0., -40., 4.),
+];
+/// Slime animation delay
+const SLIME_ANIMATION_DELAY: Range<f32> = 1.0..10.0;
+
+/// Player position
+const PLAYER_POS: Vec3 = Vec3::new(0., 0., 5.);
+/// Player animation delay
+const PLAYER_ANIMATION_DELAY: Range<f32> = 1.0..5.0;
 
 /// Spawn arena with player, enemies and objects
 pub(crate) fn spawn_arena(
     mut animation_rng: Single<&mut WyRand, With<AnimationRng>>,
     mut commands: Commands,
+    mut visual_map: ResMut<VisualMap>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
     level_assets: Res<ArenaAssets>,
@@ -77,101 +123,74 @@ pub(crate) fn spawn_arena(
     slime_collision_data: Res<Assets<CollisionData<Slime>>>,
     slime_collision_handle: Res<CollisionHandle<Slime>>,
 ) {
-    commands.spawn((
-        Name::new("Level"),
-        Mesh2d(meshes.add(Rectangle::new(GROUND_WIDTH_HEIGHT, GROUND_WIDTH_HEIGHT))),
-        MeshMaterial2d(materials.add(Into::<Color>::into(GROUND_COLOR))),
-        Transform::from_xyz(0., 0., 2.),
-        Visibility::default(),
-        DespawnOnExit(Screen::Gameplay),
-        children![
-            player(
-                &player_animations,
-                &player_collision_data,
-                &player_collision_handle,
-                animation_rng.random_range(1.0f32..5.0f32),
-            ),
-            (
-                Transform::from_xyz(40., 0., 3.),
-                slime(
-                    &slime_animations,
-                    &slime_collision_data,
-                    &slime_collision_handle,
-                    animation_rng.random_range(2.0f32..10.0f32),
-                ),
-            ),
-            (
-                Transform::from_xyz(-40., 0., 3.),
-                slime(
-                    &slime_animations,
-                    &slime_collision_data,
-                    &slime_collision_handle,
-                    animation_rng.random_range(2.0f32..10.0f32),
-                ),
-            ),
-            (
-                Transform::from_xyz(0., 40., 3.),
-                slime(
-                    &slime_animations,
-                    &slime_collision_data,
-                    &slime_collision_handle,
-                    animation_rng.random_range(2.0f32..10.0f32),
-                ),
-            ),
-            (
-                Transform::from_xyz(0., -40., 3.),
-                slime(
-                    &slime_animations,
-                    &slime_collision_data,
-                    &slime_collision_handle,
-                    animation_rng.random_range(2.0f32..10.0f32),
-                ),
-            ),
-            border(
-                Transform {
-                    translation: Vec3::new(GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 0., 3.),
-                    rotation: Quat::from_rotation_z(std::f32::consts::PI / 2.0),
-                    ..default()
-                },
-                &mut meshes,
-                &mut materials
-            ),
-            border(
-                Transform {
-                    translation: Vec3::new(-GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2., 0., 3.),
-                    rotation: Quat::from_rotation_z(std::f32::consts::PI / 2.0),
-                    ..default()
-                },
-                &mut meshes,
-                &mut materials
-            ),
-            border(
-                Transform {
-                    translation: Vec3::new(0., GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 3.),
-                    ..default()
-                },
-                &mut meshes,
-                &mut materials
-            ),
-            border(
-                Transform {
-                    translation: Vec3::new(0., -GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2., 3.),
-                    ..default()
-                },
-                &mut meshes,
-                &mut materials
-            ),
-            (
+    let level = commands
+        .spawn((
+            Name::new("Level"),
+            Mesh2d(meshes.add(Rectangle::new(GROUND_WIDTH_HEIGHT, GROUND_WIDTH_HEIGHT))),
+            MeshMaterial2d(materials.add(Into::<Color>::into(GROUND_COLOR))),
+            Transform::from_translation(LEVEL_POS),
+            Visibility::default(),
+            DespawnOnExit(Screen::Gameplay),
+            children![(
                 Name::new("Gameplay Music"),
                 music(level_assets.music.clone())
-            ),
-        ],
-    ));
+            ),],
+        ))
+        .id();
+
+    for transform in BORDER_TRANSFORMS {
+        commands.entity(level).with_children(|commands| {
+            commands.spawn((transform, border(&mut meshes, &mut materials)));
+        });
+    }
+
+    for pos in SLIME_POSITIONS {
+        commands.entity(level).with_children(|commands_p| {
+            let slime = commands_p
+                .spawn((
+                    Transform::from_translation(pos),
+                    slime(&slime_collision_data, &slime_collision_handle),
+                ))
+                .id();
+            commands_p
+                .commands()
+                .entity(slime)
+                .with_children(|commands_c| {
+                    let slime_visual = commands_c
+                        .spawn(slime_visual(
+                            &slime_animations,
+                            animation_rng.random_range(SLIME_ANIMATION_DELAY),
+                        ))
+                        .id();
+                    visual_map.0.insert(slime, slime_visual);
+                });
+        });
+    }
+
+    commands.entity(level).with_children(|commands_p| {
+        let player = commands_p
+            .spawn((
+                Transform::from_translation(PLAYER_POS),
+                player(&player_collision_data, &player_collision_handle),
+            ))
+            .id();
+        commands_p
+            .commands()
+            .entity(player)
+            .with_children(|commands_c| {
+                let player_visual = commands_c
+                    .spawn(player_visual(
+                        &player_animations,
+                        animation_rng.random_range(PLAYER_ANIMATION_DELAY),
+                    ))
+                    .id();
+                visual_map.0.insert(player, player_visual);
+            });
+    });
 }
 
 /// Border for the arena
 fn border(
-    transform: Transform,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,
 ) -> impl Bundle {
@@ -181,7 +200,6 @@ fn border(
             (GROUND_WIDTH_HEIGHT + BORDER_HEIGHT * 2.) / 2.,
             BORDER_HEIGHT / 2.,
         ),
-        transform,
         Mesh2d(meshes.add(Rectangle::new(
             GROUND_WIDTH_HEIGHT + BORDER_HEIGHT * 2.,
             BORDER_HEIGHT,

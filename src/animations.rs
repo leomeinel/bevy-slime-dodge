@@ -31,7 +31,7 @@ use rand::seq::IndexedRandom as _;
 use crate::{
     AppSystems,
     audio::sound_effect,
-    characters::{CharacterAssets, Movement},
+    characters::{CharacterAssets, Movement, VisualMap},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -196,21 +196,31 @@ fn setup<T, A>(
 
 /// Update animations
 fn update<T>(
-    mut query: Query<
+    parent_query: Query<(Entity, &mut Movement), With<T>>,
+    mut child_query: Query<
         (
-            &AnimationController,
+            &mut AnimationController,
             &mut Sprite,
             &mut SpritesheetAnimation,
-            &mut Movement,
             &AnimationTimer,
         ),
-        With<T>,
+        Without<T>,
     >,
     animations: Res<Animations<T>>,
+    visual_map: Res<VisualMap>,
 ) where
     T: Component,
 {
-    for (controller, mut sprite, mut animation, movement, timer) in &mut query {
+    for (entity, movement) in &parent_query {
+        // Extract `animation_controller` from `child_query`
+        let Some(visual) = visual_map.0.get(&entity) else {
+            continue;
+        };
+        let Ok((controller, mut sprite, mut animation, timer)) = child_query.get_mut(*visual)
+        else {
+            continue;
+        };
+
         // Reset animation after timer has finished
         if timer.0.just_finished() {
             animation.reset();
@@ -254,11 +264,13 @@ fn update<T>(
 /// Update animation sounds
 fn update_sound<T, A>(
     mut rng: Single<&mut WyRand, With<AnimationRng>>,
-    mut query: Query<(&mut AnimationController, &mut SpritesheetAnimation), With<T>>,
+    parent_query: Query<Entity, With<T>>,
+    mut child_query: Query<(&mut AnimationController, &mut SpritesheetAnimation), Without<T>>,
     mut commands: Commands,
+    animations: Res<Animations<T>>,
     data: Res<Assets<AnimationData<T>>>,
     handle: Res<AnimationHandle<T>>,
-    animations: Res<Animations<T>>,
+    visual_map: Res<VisualMap>,
     assets: If<Res<A>>,
 ) where
     T: Component + Default + Reflectable,
@@ -269,7 +281,15 @@ fn update_sound<T, A>(
         return;
     };
 
-    for (mut controller, animation) in &mut query {
+    for entity in &parent_query {
+        // Extract `animation_controller` from `child_query`
+        let Some(visual) = visual_map.0.get(&entity) else {
+            continue;
+        };
+        let Ok((mut controller, animation)) = child_query.get_mut(*visual) else {
+            continue;
+        };
+
         // Continue if animation is not walk or we are not on the correct frame
         if animation.animation != animations.walk
             || !data.step_sound_frames.contains(&animation.progress.frame)

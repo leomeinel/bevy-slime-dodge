@@ -78,19 +78,15 @@ fn setup_slime(mut commands: Commands, assets: Res<AssetServer>) {
     commands.insert_resource(animation_handle);
 }
 
-/// The slime enemy.
+/// Slime enemy parent
 pub(crate) fn slime(
-    animations: &Res<Animations<Slime>>,
     collision_data: &Res<Assets<CollisionData<Slime>>>,
     collision_handle: &Res<CollisionHandle<Slime>>,
-    animation_delay: f32,
 ) -> impl Bundle {
     (
         Name::new("Slime"),
         Npc,
         Slime,
-        animations.sprite.clone(),
-        SpritesheetAnimation::new(animations.idle.clone()),
         RigidBody::KinematicVelocityBased,
         GravityScale(0.),
         collider::<Slime>(collision_data, collision_handle),
@@ -98,7 +94,18 @@ pub(crate) fn slime(
         LockedAxes::ROTATION_LOCKED,
         Movement::default(),
         JumpTimer::default(),
-        AnimationTimer(Timer::from_seconds(animation_delay, TimerMode::Once)),
+    )
+}
+
+/// Slime enemy child with visual components
+pub(crate) fn slime_visual(
+    animations: &Res<Animations<Slime>>,
+    animation_delay: f32,
+) -> impl Bundle {
+    (
+        animations.sprite.clone(),
+        SpritesheetAnimation::new(animations.idle.clone()),
         AnimationController::default(),
+        AnimationTimer(Timer::from_seconds(animation_delay, TimerMode::Once)),
     )
 }

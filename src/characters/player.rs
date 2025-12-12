@@ -22,7 +22,7 @@ use crate::{
     AppSystems, PausableSystems, Pause,
     animations::{AnimationController, AnimationState, AnimationTimer, Animations},
     characters::{
-        CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement, collider,
+        CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement, VisualMap, collider,
         tick_jump_timer,
     },
     impl_character_assets,
@@ -120,24 +120,18 @@ const WALK_SPEED: f32 = 80.;
 
 /// The player character.
 pub(crate) fn player(
-    animations: &Res<Animations<Player>>,
     collision_data: &Res<Assets<CollisionData<Player>>>,
     collision_handle: &Res<CollisionHandle<Player>>,
-    animation_delay: f32,
 ) -> impl Bundle {
     (
         Name::new("Player"),
         Player,
-        animations.sprite.clone(),
-        SpritesheetAnimation::new(animations.idle.clone()),
         RigidBody::KinematicVelocityBased,
         GravityScale(0.),
         collider::<Player>(collision_data, collision_handle),
         KinematicCharacterController::default(),
         LockedAxes::ROTATION_LOCKED,
         Movement::default(),
-        AnimationTimer(Timer::from_seconds(animation_delay, TimerMode::Once)),
-        AnimationController::default(),
         actions!(
             Player[
                 (
@@ -160,27 +154,42 @@ pub(crate) fn player(
     )
 }
 
+/// Player child with visual components
+pub(crate) fn player_visual(
+    animations: &Res<Animations<Player>>,
+    animation_delay: f32,
+) -> impl Bundle {
+    (
+        animations.sprite.clone(),
+        SpritesheetAnimation::new(animations.idle.clone()),
+        AnimationController::default(),
+        AnimationTimer(Timer::from_seconds(animation_delay, TimerMode::Once)),
+    )
+}
+
 /// On a fired walk, set translation to the given input
 fn apply_walk(
     event: On<Fire<Walk>>,
-    controllers: Single<
-        (
-            &mut AnimationController,
-            &mut KinematicCharacterController,
-            &mut Movement,
-        ),
-        With<Player>,
-    >,
+    parent: Single<(Entity, &mut KinematicCharacterController, &mut Movement), With<Player>>,
+    mut child_query: Query<&mut AnimationController, Without<Player>>,
     pause: Res<State<Pause>>,
     time: Res<Time>,
+    visual_map: Res<VisualMap>,
 ) {
     // Return if game is paused
     if pause.get().0 {
         return;
     }
 
-    let (mut animation_controller, mut character_controller, mut movement) =
-        controllers.into_inner();
+    let (entity, mut character_controller, mut movement) = parent.into_inner();
+
+    // Extract `animation_controller` from `child_query`
+    let Some(visual) = visual_map.0.get(&entity) else {
+        return;
+    };
+    let Ok(mut animation_controller) = child_query.get_mut(*visual) else {
+        return;
+    };
 
     // Return if we are jumping
     let state = animation_controller.state;
@@ -224,16 +233,26 @@ fn stop_walk(
 // On a fired jump, move player up
 fn set_jump(
     _: On<Fire<Jump>>,
-    query: Single<(Entity, &mut AnimationController), With<Player>>,
+    parent: Single<Entity, With<Player>>,
+    mut child_query: Query<&mut AnimationController, Without<Player>>,
     mut commands: Commands,
     pause: Res<State<Pause>>,
+    visual_map: Res<VisualMap>,
 ) {
     // Return if game is paused
     if pause.get().0 {
         return;
     }
 
-    let (entity, mut animation_controller) = query.into_inner();
+    let entity = parent.into_inner();
+
+    // Extract `animation_controller` from `child_query`
+    let Some(visual) = visual_map.0.get(&entity) else {
+        return;
+    };
+    let Ok(mut animation_controller) = child_query.get_mut(*visual) else {
+        return;
+    };
 
     // Return if we are already jumping
     let state = animation_controller.state;
@@ -250,17 +269,28 @@ const JUMP_HEIGHT: f32 = 24.;
 
 /// Apply jump
 fn apply_jump(
-    query: Single<
+    parent: Single<
         (
-            &mut AnimationController,
+            Entity,
             &mut KinematicCharacterController,
             &mut Movement,
             &JumpTimer,
         ),
         With<Player>,
     >,
+    child_query: Query<&AnimationController, Without<Player>>,
+    visual_map: Res<VisualMap>,
 ) {
-    let (animation_controller, mut character_controller, mut movement, timer) = query.into_inner();
+    let (entity, mut character_controller, mut movement, timer) = parent.into_inner();
+
+    // Extract `animation_controller` from `child_query`
+    let Some(visual) = visual_map.0.get(&entity) else {
+        return;
+    };
+    let Ok(animation_controller) = child_query.get(*visual) else {
+        return;
+    };
+
     let state = animation_controller.state;
 
     // Return if we are already jumping
@@ -283,10 +313,20 @@ fn apply_jump(
 
 /// Limit jump by setting fall after specific time and then switching to walk
 fn limit_jump(
-    query: Single<(Entity, &mut AnimationController, &mut Movement, &JumpTimer), With<Player>>,
+    parent: Single<(Entity, &mut Movement, &JumpTimer), With<Player>>,
+    mut child_query: Query<&mut AnimationController, Without<Player>>,
     mut commands: Commands,
+    visual_map: Res<VisualMap>,
 ) {
-    let (entity, mut animation_controller, mut movement, timer) = query.into_inner();
+    let (entity, mut movement, timer) = parent.into_inner();
+
+    // Extract `animation_controller` from `child_query`
+    let Some(visual) = visual_map.0.get(&entity) else {
+        return;
+    };
+    let Ok(mut animation_controller) = child_query.get_mut(*visual) else {
+        return;
+    };
 
     // Return if timer has not finished
     if !timer.0.just_finished() {

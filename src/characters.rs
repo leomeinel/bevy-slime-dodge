@@ -14,12 +14,15 @@ pub(crate) mod player;
 
 use std::marker::PhantomData;
 
-use bevy::{prelude::*, reflect::Reflectable};
+use bevy::{platform::collections::HashMap, prelude::*, reflect::Reflectable};
 use bevy_rapier2d::prelude::Collider;
 
 use crate::AppSystems;
 
 pub(super) fn plugin(app: &mut App) {
+    // Insert `VisualMap`
+    app.insert_resource(VisualMap::default());
+
     // Add child plugins
     app.add_plugins((npc::plugin, player::plugin));
 
@@ -87,6 +90,10 @@ impl Default for JumpTimer {
         ))
     }
 }
+
+/// Map of characters to their visual representations
+#[derive(Resource, Default)]
+pub(crate) struct VisualMap(pub(crate) HashMap<Entity, Entity>);
 
 /// Collider for different shapes
 pub(crate) fn collider<T>(

@@ -42,5 +42,9 @@ elif [[ "${1}" == "web-dev" ]]; then
     "${SCRIPT_DIR}"/build.sh "${1}"
     run_web
 else
-    cargo run
+    if command -v mangohud >/dev/null 2>&1; then
+        mangohud cargo run
+    else
+        cargo run
+    fi
 fi

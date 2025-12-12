@@ -20,6 +20,7 @@ This repository is not entirely licensed as Apache-2.0.
 ### Debugging
 
 - [flamegraph](https://crates.io/crates/flamegraph)
+- [mangohud](https://archlinux.org/packages/extra/x86_64/mangohud/)
 - [perf](https://archlinux.org/packages/extra/x86_64/perf/)
 - [wasm-server-runner](https://crates.io/crates/wasm-server-runner)
 - [yq](https://archlinux.org/packages/extra/any/yq/)

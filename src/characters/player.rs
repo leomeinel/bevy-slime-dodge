@@ -272,7 +272,7 @@ fn set_jump(
 }
 
 /// Jump height
-const JUMP_HEIGHT: f32 = 24.;
+const JUMP_HEIGHT: f32 = 12.;
 
 /// Apply jump
 fn apply_jump(

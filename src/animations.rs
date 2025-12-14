@@ -31,7 +31,8 @@ use rand::seq::IndexedRandom as _;
 use crate::{
     AppSystems,
     audio::sound_effect,
-    characters::{CharacterAssets, Movement, VisualMap},
+    characters::{CharacterAssets, JUMP_DURATION_SECS, Movement, VisualMap},
+    logging::warn::{MISSING_OPTIONAL_ANIMATION_DATA, MISSING_OPTIONAL_ASSET_DATA},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -49,18 +50,39 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 /// Animation data deserialized from a ron file as a generic
-#[derive(serde::Deserialize, Asset, TypePath)]
+#[derive(serde::Deserialize, Asset, TypePath, Default)]
 struct AnimationData<T>
 where
     T: Reflectable,
 {
     atlas_columns: usize,
     atlas_rows: usize,
-    idle_frames: usize,
-    idle_interval_ms: u32,
-    move_frames: usize,
-    move_interval_ms: u32,
-    step_sound_frames: Vec<usize>,
+    #[serde(default)]
+    idle_row: Option<usize>,
+    #[serde(default)]
+    idle_frames: Option<usize>,
+    #[serde(default)]
+    idle_interval_ms: Option<u32>,
+    #[serde(default)]
+    walk_row: Option<usize>,
+    #[serde(default)]
+    walk_frames: Option<usize>,
+    #[serde(default)]
+    walk_interval_ms: Option<u32>,
+    #[serde(default)]
+    walk_sound_frames: Option<Vec<usize>>,
+    #[serde(default)]
+    jump_row: Option<usize>,
+    #[serde(default)]
+    jump_frames: Option<usize>,
+    #[serde(default)]
+    jump_sound_frames: Option<Vec<usize>>,
+    #[serde(default)]
+    fall_row: Option<usize>,
+    #[serde(default)]
+    fall_frames: Option<usize>,
+    #[serde(default)]
+    fall_sound_frames: Option<Vec<usize>>,
     #[serde(skip)]
     _phantom: PhantomData<T>,
 }
@@ -78,9 +100,9 @@ where
 pub(crate) struct Animations<T> {
     pub(crate) sprite: Sprite,
     pub(crate) idle: Handle<Animation>,
-    pub(crate) walk: Handle<Animation>,
-    pub(crate) jump: Handle<Animation>,
-    pub(crate) fall: Handle<Animation>,
+    pub(crate) walk: Option<Handle<Animation>>,
+    pub(crate) jump: Option<Handle<Animation>>,
+    pub(crate) fall: Option<Handle<Animation>>,
     _phantom: PhantomData<T>,
 }
 
@@ -95,12 +117,20 @@ pub(crate) enum AnimationState {
 }
 
 /// Controller for animations
-#[derive(Component, Default)]
+#[derive(Component)]
 pub(crate) struct AnimationController {
     /// Used to determine next animation
     pub(crate) state: AnimationState,
     /// Used to determine if we should play sound again
-    pub(crate) sound_played: bool,
+    pub(crate) sound_frame: usize,
+}
+impl Default for AnimationController {
+    fn default() -> Self {
+        Self {
+            state: AnimationState::default(),
+            sound_frame: usize::MAX,
+        }
+    }
 }
 
 /// Timer that tracks animation
@@ -131,57 +161,77 @@ fn setup<T, A>(
     A: CharacterAssets + Resource,
 {
     // Get animation from `AnimationData` with `AnimationHandle`
-    let Some(data) = data.get(handle.0.id()) else {
-        return;
-    };
+    let data = data.get(handle.0.id()).unwrap();
+
     // Set sprite sheet and generate sprite from it
-    let sprite_sheet = Spritesheet::new(
-        &assets.get_image().clone(),
-        data.atlas_columns,
-        data.atlas_rows,
-    );
+    let sprite_sheet = Spritesheet::new(assets.get_image(), data.atlas_columns, data.atlas_rows);
     let sprite = sprite_sheet
         .with_loaded_image(&images)
         .unwrap()
         .sprite(&mut atlas_layouts);
 
-    // Idle animation
-    let idle_animation = sprite_sheet
-        .create_animation()
-        .add_horizontal_strip(0, 0, data.idle_frames)
-        .set_clip_duration(AnimationDuration::PerFrame(data.idle_interval_ms))
-        .set_repetitions(AnimationRepeat::Loop)
-        .build();
-    let idle = global_animations.add(idle_animation);
+    // Idle animation: This is the only required animation
+    let idle = animation_handle(
+        &mut global_animations,
+        &sprite_sheet,
+        data.idle_row,
+        data.idle_frames,
+        data.idle_interval_ms,
+        AnimationRepeat::Loop,
+    )
+    .unwrap();
 
     // Walk animation
-    let walk_animation = sprite_sheet
-        .create_animation()
-        .add_horizontal_strip(0, 1, data.move_frames)
-        .set_clip_duration(AnimationDuration::PerFrame(data.move_interval_ms))
-        .set_repetitions(AnimationRepeat::Loop)
-        .build();
-    let walk = global_animations.add(walk_animation);
+    let walk = animation_handle(
+        &mut global_animations,
+        &sprite_sheet,
+        data.walk_row,
+        data.walk_frames,
+        data.walk_interval_ms,
+        AnimationRepeat::Loop,
+    );
 
-    // FIXME: Use actual jump animation strip
     // Jump animation
-    let jump_animation = sprite_sheet
-        .create_animation()
-        .add_horizontal_strip(0, 1, data.move_frames)
-        .set_clip_duration(AnimationDuration::PerFrame(data.move_interval_ms))
-        .set_repetitions(AnimationRepeat::Loop)
-        .build();
-    let jump = global_animations.add(jump_animation);
+    let jump = data
+        .jump_frames
+        .map(|frames| {
+            let interval_ms = if frames < 1 {
+                0
+            } else {
+                // Divide half of the jumping duration, which is equivalent to needed animation time, by number of associated frames
+                (JUMP_DURATION_SECS * 500. / frames as f32).abs() as u32
+            };
+            animation_handle(
+                &mut global_animations,
+                &sprite_sheet,
+                data.jump_row,
+                data.jump_frames,
+                Some(interval_ms),
+                AnimationRepeat::Times(1),
+            )
+        })
+        .unwrap_or_else(|| None);
 
-    // FIXME: Use actual fall animation strip
     // Fall animation
-    let fall_animation = sprite_sheet
-        .create_animation()
-        .add_horizontal_strip(0, 1, data.move_frames)
-        .set_clip_duration(AnimationDuration::PerFrame(data.move_interval_ms))
-        .set_repetitions(AnimationRepeat::Loop)
-        .build();
-    let fall = global_animations.add(fall_animation);
+    let fall = data
+        .fall_frames
+        .map(|frames| {
+            let interval_ms = if frames < 1 {
+                0
+            } else {
+                // Divide half of the jumping duration, which is equivalent to needed animation time, by number of associated frames
+                (JUMP_DURATION_SECS * 500. / frames as f32).abs() as u32
+            };
+            animation_handle(
+                &mut global_animations,
+                &sprite_sheet,
+                data.fall_row,
+                data.fall_frames,
+                Some(interval_ms),
+                AnimationRepeat::Times(1),
+            )
+        })
+        .unwrap_or_else(|| None);
 
     // Add to `Animations`
     commands.insert_resource(Animations::<T> {
@@ -192,6 +242,38 @@ fn setup<T, A>(
         fall,
         ..default()
     });
+}
+
+/// Animation handle customized via parameters
+///
+/// Returns [`Some`] for valid parameters
+/// Returns [`None`] for invalid parameters
+fn animation_handle(
+    global_animations: &mut ResMut<Assets<Animation>>,
+    sprite_sheet: &Spritesheet,
+    row: Option<usize>,
+    frames: Option<usize>,
+    interval: Option<u32>,
+    repetitions: AnimationRepeat,
+) -> Option<Handle<Animation>> {
+    let (Some(row), Some(frames), Some(interval)) = (row, frames, interval) else {
+        return None;
+    };
+
+    if frames < 1 {
+        return None;
+    }
+
+    Some(
+        global_animations.add(
+            sprite_sheet
+                .create_animation()
+                .add_horizontal_strip(0, row, frames)
+                .set_clip_duration(AnimationDuration::PerFrame(interval))
+                .set_repetitions(repetitions)
+                .build(),
+        ),
+    )
 }
 
 /// Update animations
@@ -216,7 +298,7 @@ fn update<T>(
         let Some(visual) = visual_map.0.get(&entity) else {
             continue;
         };
-        let Ok((controller, mut sprite, mut animation, timer)) = child_query.get_mut(*visual)
+        let Ok((mut controller, mut sprite, mut animation, timer)) = child_query.get_mut(*visual)
         else {
             continue;
         };
@@ -244,20 +326,23 @@ fn update<T>(
 
         // Match to current `AnimationState`
         match state {
-            AnimationState::Walk if animation.animation != animations.walk => {
-                animation.switch(animations.walk.clone())
+            AnimationState::Walk if &animation.animation != animations.walk.as_ref().unwrap() => {
+                animation.switch(animations.walk.as_ref().unwrap().clone());
             }
             AnimationState::Idle if animation.animation != animations.idle => {
-                animation.switch(animations.idle.clone())
+                animation.switch(animations.idle.clone());
             }
-            AnimationState::Jump if animation.animation != animations.jump => {
-                animation.switch(animations.jump.clone())
+            AnimationState::Jump if &animation.animation != animations.jump.as_ref().unwrap() => {
+                animation.switch(animations.jump.as_ref().unwrap().clone());
             }
-            AnimationState::Fall if animation.animation != animations.fall => {
-                animation.switch(animations.fall.clone())
+            AnimationState::Fall if &animation.animation != animations.fall.as_ref().unwrap() => {
+                animation.switch(animations.fall.as_ref().unwrap().clone());
             }
-            _ => (),
+            _ => continue,
         }
+
+        // Reset sound frame
+        controller.sound_frame = usize::MAX;
     }
 }
 
@@ -267,7 +352,6 @@ fn update_sound<T, A>(
     parent_query: Query<Entity, With<T>>,
     mut child_query: Query<(&mut AnimationController, &mut SpritesheetAnimation), Without<T>>,
     mut commands: Commands,
-    animations: Res<Animations<T>>,
     data: Res<Assets<AnimationData<T>>>,
     handle: Res<AnimationHandle<T>>,
     visual_map: Res<VisualMap>,
@@ -277,9 +361,7 @@ fn update_sound<T, A>(
     A: CharacterAssets + Resource,
 {
     // Get animation from `AnimationData` with `AnimationHandle`
-    let Some(data) = data.get(handle.0.id()) else {
-        return;
-    };
+    let data = data.get(handle.0.id()).unwrap();
 
     for entity in &parent_query {
         // Extract `animation_controller` from `child_query`
@@ -290,31 +372,71 @@ fn update_sound<T, A>(
             continue;
         };
 
-        // Continue if animation is not walk or we are not on the correct frame
-        if animation.animation != animations.walk
-            || !data.step_sound_frames.contains(&animation.progress.frame)
-        {
-            // Reset sound_played
-            controller.sound_played = false;
-            continue;
+        // Set translation to target translation because we even want to animate if walking against a wall
+        let state = controller.state;
+
+        // Set sound played false if animation has changed
+        if controller.sound_frame == animation.progress.frame {
+            return;
         }
 
-        // Continue if sound has already been played
-        if controller.sound_played {
+        // Match to current `AnimationState`
+        let Some(sound) = (match state {
+            AnimationState::Walk => choose_sound(
+                rng.as_mut(),
+                &animation.progress.frame,
+                &data.walk_sound_frames,
+                assets.get_walk_sounds(),
+            ),
+            AnimationState::Jump => choose_sound(
+                rng.as_mut(),
+                &animation.progress.frame,
+                &data.jump_sound_frames,
+                assets.get_jump_sounds(),
+            ),
+            AnimationState::Fall => choose_sound(
+                rng.as_mut(),
+                &animation.progress.frame,
+                &data.fall_sound_frames,
+                assets.get_fall_sounds(),
+            ),
+            _ => None,
+        }) else {
+            // Reset sound frame
+            controller.sound_frame = usize::MAX;
             continue;
-        }
+        };
 
-        // Play random step sound
-        let step_sound = assets
-            .get_step_sounds()
-            .choose(rng.as_mut())
-            .unwrap()
-            .clone();
-        commands.spawn(sound_effect(step_sound));
-
-        // Set sound_played
-        controller.sound_played = true;
+        // Play sound
+        commands.spawn(sound_effect(sound));
+        controller.sound_frame = animation.progress.frame;
     }
+}
+
+/// Choose a random customized via parameters for current frame.
+///
+/// Returns [`Some`] if current frame is a fall sound frame.
+/// Returns [`None`] if current frame is not a fall sound frame.
+fn choose_sound(
+    rng: &mut WyRand,
+    current_frame: &usize,
+    frames: &Option<Vec<usize>>,
+    sounds: &Option<Vec<Handle<AudioSource>>>,
+) -> Option<Handle<AudioSource>> {
+    let frames = frames.as_deref().unwrap_or_else(|| {
+        warn!("{}", MISSING_OPTIONAL_ANIMATION_DATA);
+        &[]
+    });
+    if !frames.contains(current_frame) {
+        return None;
+    }
+
+    let sounds = sounds.as_deref().unwrap_or_else(|| {
+        warn!("{}", MISSING_OPTIONAL_ASSET_DATA);
+        &[]
+    });
+
+    sounds.choose(rng).cloned()
 }
 
 /// Tick animation timer

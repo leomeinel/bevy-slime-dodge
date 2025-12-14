@@ -85,8 +85,14 @@ pub(crate) enum PlayerAssetState {
 /// Assets that are serialized from a ron file
 #[derive(AssetCollection, Resource)]
 pub(crate) struct PlayerAssets {
-    #[asset(key = "male.step_sounds", collection(typed))]
-    pub(crate) step_sounds: Vec<Handle<AudioSource>>,
+    #[asset(key = "male.walk_sounds", collection(typed), optional)]
+    pub(crate) walk_sounds: Option<Vec<Handle<AudioSource>>>,
+
+    #[asset(key = "male.jump_sounds", collection(typed), optional)]
+    pub(crate) jump_sounds: Option<Vec<Handle<AudioSource>>>,
+
+    #[asset(key = "male.fall_sounds", collection(typed), optional)]
+    pub(crate) fall_sounds: Option<Vec<Handle<AudioSource>>>,
 
     #[asset(key = "male.image")]
     pub(crate) image: Handle<Image>,

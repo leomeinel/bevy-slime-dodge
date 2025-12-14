@@ -1,10 +1,20 @@
 ({
-    "male.step_sounds": Files (
+    "male.walk_sounds": Files (
         paths: [
-            "audio/sound-effects/movement/player-step-hard0.ogg",
-            "audio/sound-effects/movement/player-step-hard1.ogg",
-            "audio/sound-effects/movement/player-step-hard2.ogg",
-            "audio/sound-effects/movement/player-step-hard3.ogg",
+            "audio/sound-effects/movement/player-walk-hard0.ogg",
+            "audio/sound-effects/movement/player-walk-hard1.ogg",
+            "audio/sound-effects/movement/player-walk-hard2.ogg",
+            "audio/sound-effects/movement/player-walk-hard3.ogg",
+        ],
+    ),
+    "male.jump_sounds": Files (
+        paths: [
+            "audio/sound-effects/movement/player-jump.ogg",
+        ],
+    ),
+    "male.fall_sounds": Files (
+        paths: [
+            "audio/sound-effects/movement/player-fall.ogg",
         ],
     ),
     "male.image": Image (

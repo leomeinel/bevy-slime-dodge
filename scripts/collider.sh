@@ -28,9 +28,9 @@ for file in "${SCRIPT_DIR}"/colliders/*.webp; do
 
     {
         printf '%s\n' "CollisionData ("
-        printf '%s\n' "    shape: \"${SHAPE}\","
-        printf '%s\n' "    width: ${TRIM_W},"
-        printf '%s\n' "    height: ${TRIM_H},"
+        printf '%s\n' "    shape: Some(\"${SHAPE}\"),"
+        printf '%s\n' "    width: Some(${TRIM_W}),"
+        printf '%s\n' "    height: Some(${TRIM_H}),"
         printf '%s\n' ")"
     } >"${OUTPUT}"
 done

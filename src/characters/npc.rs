@@ -55,8 +55,14 @@ pub(crate) enum NpcAssetState {
 /// Assets that are serialized from a ron file
 #[derive(AssetCollection, Resource)]
 pub(crate) struct SlimeAssets {
-    #[asset(key = "slime.step_sounds", collection(typed))]
-    pub(crate) step_sounds: Vec<Handle<AudioSource>>,
+    #[asset(key = "slime.walk_sounds", collection(typed), optional)]
+    pub(crate) walk_sounds: Option<Vec<Handle<AudioSource>>>,
+
+    #[asset(key = "slime.jump_sounds", collection(typed), optional)]
+    pub(crate) jump_sounds: Option<Vec<Handle<AudioSource>>>,
+
+    #[asset(key = "slime.fall_sounds", collection(typed), optional)]
+    pub(crate) fall_sounds: Option<Vec<Handle<AudioSource>>>,
 
     #[asset(key = "slime.image")]
     pub(crate) image: Handle<Image>,

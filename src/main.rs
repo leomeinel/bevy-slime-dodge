@@ -22,6 +22,7 @@ mod characters;
 #[cfg(feature = "dev")]
 mod dev_tools;
 mod levels;
+mod logging;
 mod menus;
 mod screens;
 mod theme;

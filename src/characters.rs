@@ -17,7 +17,7 @@ use std::marker::PhantomData;
 use bevy::{platform::collections::HashMap, prelude::*, reflect::Reflectable};
 use bevy_rapier2d::prelude::*;
 
-use crate::AppSystems;
+use crate::{AppSystems, logging::warn::FALLBACK_COLLISION_DATA};
 
 pub(super) fn plugin(app: &mut App) {
     // Insert `VisualMap`
@@ -30,17 +30,28 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, tick_jump_timer.in_set(AppSystems::TickTimers));
 }
 
+/// Jumping duration in seconds
+pub(crate) const JUMP_DURATION_SECS: f32 = 1.;
+
 /// Applies to anything that stores character assets
 pub(crate) trait CharacterAssets {
-    fn get_step_sounds(&self) -> &Vec<Handle<AudioSource>>;
+    fn get_walk_sounds(&self) -> &Option<Vec<Handle<AudioSource>>>;
+    fn get_jump_sounds(&self) -> &Option<Vec<Handle<AudioSource>>>;
+    fn get_fall_sounds(&self) -> &Option<Vec<Handle<AudioSource>>>;
     fn get_image(&self) -> &Handle<Image>;
 }
 #[macro_export]
 macro_rules! impl_character_assets {
     ($type: ty) => {
         impl CharacterAssets for $type {
-            fn get_step_sounds(&self) -> &Vec<Handle<AudioSource>> {
-                &self.step_sounds
+            fn get_walk_sounds(&self) -> &Option<Vec<Handle<AudioSource>>> {
+                &self.walk_sounds
+            }
+            fn get_jump_sounds(&self) -> &Option<Vec<Handle<AudioSource>>> {
+                &self.jump_sounds
+            }
+            fn get_fall_sounds(&self) -> &Option<Vec<Handle<AudioSource>>> {
+                &self.fall_sounds
             }
             fn get_image(&self) -> &Handle<Image> {
                 &self.image
@@ -50,14 +61,17 @@ macro_rules! impl_character_assets {
 }
 
 /// Animation data deserialized from a ron file as a generic
-#[derive(serde::Deserialize, Asset, TypePath)]
+#[derive(serde::Deserialize, Asset, TypePath, Default)]
 pub(crate) struct CollisionData<T>
 where
     T: Reflectable,
 {
-    shape: String,
-    width: f32,
-    height: f32,
+    #[serde(default)]
+    shape: Option<String>,
+    #[serde(default)]
+    width: Option<f32>,
+    #[serde(default)]
+    height: Option<f32>,
     #[serde(skip)]
     _phantom: PhantomData<T>,
 }
@@ -74,9 +88,6 @@ pub(crate) struct Movement {
     pub(crate) target: Vec2,
     jump_height: f32,
 }
-
-/// Jumping duration in seconds
-const JUMP_DURATION_SECS: f32 = 1.;
 
 /// Timer that tracks jumping
 #[derive(Component, Debug, Clone, PartialEq, Reflect)]
@@ -106,10 +117,16 @@ where
     // Get data from `CollisionData` with `CollisionHandle`
     let data = data.get(handle.0.id()).unwrap();
 
-    let (width, height) = (data.width, data.height);
+    let (Some(shape), Some(width), Some(height)) = (data.shape.clone(), data.width, data.height)
+    else {
+        // Return default collider if data is not complete
+        warn!("{}", FALLBACK_COLLISION_DATA);
+        return Collider::ball(12.);
+    };
+
     // Set correct collider for each shape
     // NOTE: For capsules, we just assume that the values are correct, meaning that for x: `width < height` and for y: `width > height`
-    match data.shape.as_str() {
+    match shape.as_str() {
         "ball" => Collider::ball(width / 2.),
         "capsule_x" => Collider::capsule_x((height - width) / 2., height / 2.),
         "capsule_y" => Collider::capsule_y((width - height) / 2., width / 2.),

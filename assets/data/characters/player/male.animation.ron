@@ -13,5 +13,5 @@ AnimationData (
     jump_sound_frames: Some([3]),
     fall_row: Some(3),
     fall_frames: Some(4),
-    fall_sound_frames: Some([2]),
+    fall_sound_frames: Some([]),
 )

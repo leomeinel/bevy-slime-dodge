@@ -13,9 +13,7 @@
         ],
     ),
     "male.fall_sounds": Files (
-        paths: [
-            "audio/sound-effects/movement/player-fall.ogg",
-        ],
+        paths: [],
     ),
     "male.image": Image (
         path: "images/characters/player/male.webp",

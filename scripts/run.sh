@@ -16,8 +16,8 @@ SCRIPT_DIR="$(dirname -- "$(readlink -f -- "${0}")")"
 
 # Define functions
 run_web() {
-    PACKAGE_NAME="$(tomlq -r '.package.name' "${SCRIPT_DIR}"/Cargo.toml)"
-    OUTPUT="${SCRIPT_DIR}"/target/wasm32-unknown-unknown/web-release/"${PACKAGE_NAME}".wasm
+    PACKAGE_NAME="$(tomlq -r '.package.name' "${SCRIPT_DIR}"/../Cargo.toml)"
+    OUTPUT="${SCRIPT_DIR}"/../target/wasm32-unknown-unknown/"${1}"/"${PACKAGE_NAME}".wasm
     CARGO_XDG_DIR=~/.local/share/cargo/bin
     CARGO_DIR=~/.cargo/bin
     WASM_RUNNER="wasm-server-runner"
@@ -37,10 +37,10 @@ if [[ -z "${1}" ]]; then
     cargo run --no-default-features --release
 elif [[ "${1}" == "web" ]]; then
     "${SCRIPT_DIR}"/build.sh "${1}"
-    run_web
+    run_web "${1}"
 elif [[ "${1}" == "web-dev" ]]; then
     "${SCRIPT_DIR}"/build.sh "${1}"
-    run_web
+    run_web "${1}"
 else
     if command -v mangohud >/dev/null 2>&1; then
         mangohud cargo run

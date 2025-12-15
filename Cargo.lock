@@ -344,6 +344,7 @@ dependencies = [
  "bevy_asset_loader",
  "bevy_common_assets",
  "bevy_enhanced_input",
+ "bevy_light_2d",
  "bevy_prng",
  "bevy_rand",
  "bevy_rapier2d",
@@ -1021,6 +1022,16 @@ dependencies = [
  "bevy_transform",
  "bevy_utils",
  "tracing",
+]
+
+[[package]]
+name = "bevy_light_2d"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f7f6aaac350143bafbc09ba8bf523c6319dfa9730884ed58e34f410374bcc3b"
+dependencies = [
+ "bevy",
+ "smallvec",
 ]
 
 [[package]]
@@ -3347,9 +3358,9 @@ dependencies = [
 
 [[package]]
 name = "moxcms"
-version = "0.7.10"
+version = "0.7.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80986bbbcf925ebd3be54c26613d861255284584501595cf418320c078945608"
+checksum = "ac9557c559cd6fc9867e122e20d2cbefc9ca29d80d027a8e39310920ed2f0a97"
 dependencies = [
  "num-traits",
  "pxfm",

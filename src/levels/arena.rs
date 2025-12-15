@@ -25,6 +25,7 @@ use crate::{
         npc::{Slime, slime, slime_visual},
         player::{Player, player, player_visual},
     },
+    levels::{DEFAULT_Z, DynamicZ, LEVEL_Z, SHADOW_COLOR, SHADOW_Z},
     screens::Screen,
 };
 
@@ -61,7 +62,7 @@ const GROUND_COLOR: Srgba = tailwind::GRAY_500;
 const GROUND_WIDTH_HEIGHT: f32 = 640.;
 
 /// Level position
-const LEVEL_POS: Vec3 = Vec3::new(0., 0., 2.);
+const LEVEL_POS: Vec3 = Vec3::new(0., 0., LEVEL_Z);
 
 /// rgb(17, 24, 39)
 const BORDER_COLOR: Srgba = tailwind::GRAY_900;
@@ -72,22 +73,30 @@ const QUAT_Z_90: Quat = Quat::from_xyzw(0., 0., FRAC_1_SQRT_2, FRAC_1_SQRT_2);
 /// Border transforms
 const BORDER_TRANSFORMS: [Transform; 4] = [
     Transform {
-        translation: Vec3::new(GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 0., 3.),
+        translation: Vec3::new(GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 0., DEFAULT_Z),
         rotation: QUAT_Z_90,
         scale: Vec3::ONE,
     },
     Transform {
-        translation: Vec3::new(-GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2., 0., 3.),
+        translation: Vec3::new(
+            -GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2.,
+            0.,
+            DEFAULT_Z,
+        ),
         rotation: QUAT_Z_90,
         scale: Vec3::ONE,
     },
     Transform {
-        translation: Vec3::new(0., GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., 3.),
+        translation: Vec3::new(0., GROUND_WIDTH_HEIGHT / 2. + BORDER_HEIGHT / 2., DEFAULT_Z),
         rotation: Quat::IDENTITY,
         scale: Vec3::ONE,
     },
     Transform {
-        translation: Vec3::new(0., -GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2., 3.),
+        translation: Vec3::new(
+            0.,
+            -GROUND_WIDTH_HEIGHT / 2. - BORDER_HEIGHT / 2.,
+            DEFAULT_Z,
+        ),
         rotation: Quat::IDENTITY,
         scale: Vec3::ONE,
     },
@@ -95,16 +104,16 @@ const BORDER_TRANSFORMS: [Transform; 4] = [
 
 /// Slime positions
 const SLIME_POSITIONS: [Vec3; 4] = [
-    Vec3::new(40., 0., 4.),
-    Vec3::new(-40., 0., 4.),
-    Vec3::new(0., 40., 4.),
-    Vec3::new(0., -40., 4.),
+    Vec3::new(40., 0., DEFAULT_Z),
+    Vec3::new(-40., 0., DEFAULT_Z),
+    Vec3::new(0., 40., DEFAULT_Z),
+    Vec3::new(0., -40., DEFAULT_Z),
 ];
 /// Slime animation delay
 const SLIME_ANIMATION_DELAY: Range<f32> = 1.0..10.0;
 
 /// Player position
-const PLAYER_POS: Vec3 = Vec3::new(0., 0., 5.);
+const PLAYER_POS: Vec3 = Vec3::new(0., 0., DEFAULT_Z);
 /// Player animation delay
 const PLAYER_ANIMATION_DELAY: Range<f32> = 1.0..5.0;
 
@@ -140,7 +149,11 @@ pub(crate) fn spawn_arena(
 
     for transform in BORDER_TRANSFORMS {
         commands.entity(level).with_children(|commands| {
-            commands.spawn((transform, border(&mut meshes, &mut materials)));
+            commands.spawn((
+                DynamicZ(DEFAULT_Z),
+                transform,
+                border(&mut meshes, &mut materials),
+            ));
         });
     }
 
@@ -149,6 +162,7 @@ pub(crate) fn spawn_arena(
             let slime = commands_p
                 .spawn((
                     Visibility::Inherited,
+                    DynamicZ(DEFAULT_Z),
                     Transform::from_translation(pos),
                     slime(&slime_collision_data, &slime_collision_handle),
                 ))
@@ -158,12 +172,26 @@ pub(crate) fn spawn_arena(
                 .entity(slime)
                 .with_children(|commands_c| {
                     let slime_visual = commands_c
-                        .spawn(slime_visual(
-                            &slime_animations,
-                            animation_rng.random_range(SLIME_ANIMATION_DELAY),
+                        .spawn((
+                            DynamicZ(DEFAULT_Z),
+                            slime_visual(
+                                &slime_animations,
+                                animation_rng.random_range(SLIME_ANIMATION_DELAY),
+                            ),
                         ))
                         .id();
                     visual_map.0.insert(slime, slime_visual);
+                });
+            commands_p
+                .commands()
+                .entity(slime)
+                .with_children(|commands_c| {
+                    commands_c.spawn((
+                        DynamicZ(SHADOW_Z),
+                        Transform::from_xyz(0., -8., SHADOW_Z),
+                        Mesh2d(meshes.add(Circle::new(4.))),
+                        MeshMaterial2d(materials.add(Color::from(SHADOW_COLOR.with_alpha(0.25)))),
+                    ));
                 });
         });
     }
@@ -171,6 +199,7 @@ pub(crate) fn spawn_arena(
     commands.entity(level).with_children(|commands_p| {
         let player = commands_p
             .spawn((
+                DynamicZ(DEFAULT_Z),
                 Visibility::Inherited,
                 Transform::from_translation(PLAYER_POS),
                 player(&player_collision_data, &player_collision_handle),
@@ -181,12 +210,26 @@ pub(crate) fn spawn_arena(
             .entity(player)
             .with_children(|commands_c| {
                 let player_visual = commands_c
-                    .spawn(player_visual(
-                        &player_animations,
-                        animation_rng.random_range(PLAYER_ANIMATION_DELAY),
+                    .spawn((
+                        DynamicZ(DEFAULT_Z),
+                        player_visual(
+                            &player_animations,
+                            animation_rng.random_range(PLAYER_ANIMATION_DELAY),
+                        ),
                     ))
                     .id();
                 visual_map.0.insert(player, player_visual);
+            });
+        commands_p
+            .commands()
+            .entity(player)
+            .with_children(|commands_c| {
+                commands_c.spawn((
+                    DynamicZ(SHADOW_Z),
+                    Transform::from_xyz(0., -9., SHADOW_Z),
+                    Mesh2d(meshes.add(Circle::new(4.5))),
+                    MeshMaterial2d(materials.add(Color::from(SHADOW_COLOR.with_alpha(0.25)))),
+                ));
             });
     });
 }
@@ -206,6 +249,6 @@ fn border(
             GROUND_WIDTH_HEIGHT + BORDER_HEIGHT * 2.,
             BORDER_HEIGHT,
         ))),
-        MeshMaterial2d(materials.add(Into::<Color>::into(BORDER_COLOR))),
+        MeshMaterial2d(materials.add(Color::from(BORDER_COLOR))),
     )
 }

@@ -28,7 +28,8 @@ mod screens;
 mod theme;
 mod utils;
 
-use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResized};
+use bevy::{asset::AssetMetaCheck, color::palettes::tailwind, prelude::*, window::WindowResized};
+use bevy_light_2d::prelude::*;
 use bevy_prng::WyRand;
 use bevy_rand::plugin::EntropyPlugin;
 use bevy_rapier2d::plugin::RapierPhysicsPlugin;
@@ -64,9 +65,10 @@ impl Plugin for AppPlugin {
             })
             .set(ImagePlugin::default_nearest()),));
 
-        // Libraries
+        // Add library plugins
         app.add_plugins((
             EntropyPlugin::<WyRand>::default(),
+            Light2dPlugin,
             RapierPhysicsPlugin::<()>::default(),
         ));
 
@@ -126,9 +128,12 @@ struct Pause(pub(crate) bool);
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
 
-/// Camera that renders the pixel-perfect world to the canvas.
+/// Camera that renders the world to the canvas.
 #[derive(Component)]
 struct CanvasCamera;
+
+/// Color for the ambient light: rgb(254, 243, 199)
+const AMBIENT_LIGHT_COLOR: Srgba = tailwind::AMBER_100;
 
 /// Spawn [`Camera2d`]
 fn spawn_camera(mut commands: Commands) {
@@ -137,11 +142,17 @@ fn spawn_camera(mut commands: Commands) {
         Camera2d,
         Msaa::Off,
         CanvasCamera,
+        Light2d {
+            ambient_light: AmbientLight2d {
+                color: AMBIENT_LIGHT_COLOR.into(),
+                brightness: 0.9,
+            },
+        },
     ));
 }
 
 /// In-game resolution height.
-const RES_HEIGHT: u32 = 180;
+const RES_HEIGHT: f32 = 180.;
 
 /// Scales camera projection to fit the window (integer multiples only).
 ///
@@ -154,7 +165,7 @@ fn fit_canvas(
         return;
     };
     for msg in msgs.read() {
-        let vertical_scale = msg.height / RES_HEIGHT as f32;
+        let vertical_scale = msg.height / RES_HEIGHT;
         projection.scale = 1. / vertical_scale.round();
     }
 }
@@ -166,8 +177,8 @@ const CAMERA_DECAY_RATE: f32 = 3.;
 ///
 /// Heavily inspired by: <https://bevy.org/examples/camera/2d-top-down-camera/>
 fn update_camera(
-    mut camera: Single<&mut Transform, (With<Camera2d>, Without<Player>)>,
-    player: Single<&Transform, (With<Player>, Without<Camera2d>)>,
+    mut camera: Single<&mut Transform, (With<CanvasCamera>, Without<Player>)>,
+    player: Single<&Transform, (With<Player>, Without<CanvasCamera>)>,
     time: Res<Time>,
 ) {
     let Vec3 { x, y, .. } = player.translation;

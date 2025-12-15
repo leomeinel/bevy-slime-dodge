@@ -145,7 +145,7 @@ fn spawn_camera(mut commands: Commands) {
         Light2d {
             ambient_light: AmbientLight2d {
                 color: AMBIENT_LIGHT_COLOR.into(),
-                brightness: 0.9,
+                ..default()
             },
         },
     ));
@@ -165,8 +165,8 @@ fn fit_canvas(
         return;
     };
     for msg in msgs.read() {
-        let vertical_scale = msg.height / RES_HEIGHT;
-        projection.scale = 1. / vertical_scale.round();
+        let scale_factor = 1. / (msg.height / RES_HEIGHT).round();
+        projection.scale = scale_factor;
     }
 }
 

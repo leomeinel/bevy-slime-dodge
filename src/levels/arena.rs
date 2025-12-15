@@ -21,11 +21,12 @@ use crate::{
     animations::{AnimationRng, Animations},
     audio::music,
     characters::{
-        CollisionData, CollisionHandle, VisualMap,
+        CollisionData, CollisionHandle, VisualMap, collider,
         npc::{Slime, slime, slime_visual},
         player::{Player, player, player_visual},
     },
     levels::{DEFAULT_Z, DynamicZ, LEVEL_Z, SHADOW_COLOR, SHADOW_Z},
+    logging::warn::FALLBACK_COLLISION_DATA,
     screens::Screen,
 };
 
@@ -126,12 +127,24 @@ pub(crate) fn spawn_arena(
     mut meshes: ResMut<Assets<Mesh>>,
     level_assets: Res<ArenaAssets>,
     player_animations: Res<Animations<Player>>,
-    player_collision_data: Res<Assets<CollisionData<Player>>>,
-    player_collision_handle: Res<CollisionHandle<Player>>,
+    player_data: Res<Assets<CollisionData<Player>>>,
+    player_handle: Res<CollisionHandle<Player>>,
     slime_animations: Res<Animations<Slime>>,
-    slime_collision_data: Res<Assets<CollisionData<Slime>>>,
-    slime_collision_handle: Res<CollisionHandle<Slime>>,
+    slime_data: Res<Assets<CollisionData<Slime>>>,
+    slime_handle: Res<CollisionHandle<Slime>>,
 ) {
+    // Get data from `CollisionData` with `CollisionHandle`
+    let slime_data = slime_data.get(slime_handle.0.id()).unwrap();
+    let slime_width = slime_data.width.unwrap_or_else(|| {
+        warn_once!("{}", FALLBACK_COLLISION_DATA);
+        8.
+    });
+    let player_data = player_data.get(player_handle.0.id()).unwrap();
+    let player_width = slime_data.width.unwrap_or_else(|| {
+        warn_once!("{}", FALLBACK_COLLISION_DATA);
+        9.
+    });
+
     let level = commands
         .spawn((
             Name::new("Level"),
@@ -164,7 +177,8 @@ pub(crate) fn spawn_arena(
                     Visibility::Inherited,
                     DynamicZ(DEFAULT_Z),
                     Transform::from_translation(pos),
-                    slime(&slime_collision_data, &slime_collision_handle),
+                    collider::<Slime>(slime_data),
+                    slime(),
                 ))
                 .id();
             commands_p
@@ -188,8 +202,8 @@ pub(crate) fn spawn_arena(
                 .with_children(|commands_c| {
                     commands_c.spawn((
                         DynamicZ(SHADOW_Z),
-                        Transform::from_xyz(0., -8., SHADOW_Z),
-                        Mesh2d(meshes.add(Circle::new(4.))),
+                        Transform::from_xyz(0., -slime_width / 2., SHADOW_Z),
+                        Mesh2d(meshes.add(Circle::new(-slime_width / 4.))),
                         MeshMaterial2d(materials.add(Color::from(SHADOW_COLOR.with_alpha(0.25)))),
                     ));
                 });
@@ -202,7 +216,8 @@ pub(crate) fn spawn_arena(
                 DynamicZ(DEFAULT_Z),
                 Visibility::Inherited,
                 Transform::from_translation(PLAYER_POS),
-                player(&player_collision_data, &player_collision_handle),
+                collider::<Player>(player_data),
+                player(),
             ))
             .id();
         commands_p
@@ -226,8 +241,8 @@ pub(crate) fn spawn_arena(
             .with_children(|commands_c| {
                 commands_c.spawn((
                     DynamicZ(SHADOW_Z),
-                    Transform::from_xyz(0., -9., SHADOW_Z),
-                    Mesh2d(meshes.add(Circle::new(4.5))),
+                    Transform::from_xyz(0., -player_width / 2., SHADOW_Z),
+                    Mesh2d(meshes.add(Circle::new(player_width / 4.))),
                     MeshMaterial2d(materials.add(Color::from(SHADOW_COLOR.with_alpha(0.25)))),
                 ));
             });

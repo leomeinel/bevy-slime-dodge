@@ -17,7 +17,7 @@ use bevy_spritesheet_animation::prelude::*;
 
 use crate::{
     animations::{AnimationController, AnimationTimer, Animations},
-    characters::{CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement, collider},
+    characters::{CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement},
     impl_character_assets,
 };
 
@@ -85,17 +85,13 @@ fn setup_slime(mut commands: Commands, assets: Res<AssetServer>) {
 }
 
 /// Slime enemy parent
-pub(crate) fn slime(
-    collision_data: &Res<Assets<CollisionData<Slime>>>,
-    collision_handle: &Res<CollisionHandle<Slime>>,
-) -> impl Bundle {
+pub(crate) fn slime() -> impl Bundle {
     (
         Name::new("Slime"),
         Npc,
         Slime,
         RigidBody::KinematicPositionBased,
         GravityScale(0.),
-        collider::<Slime>(collision_data, collision_handle),
         KinematicCharacterController {
             filter_flags: QueryFilterFlags::EXCLUDE_KINEMATIC,
             ..default()

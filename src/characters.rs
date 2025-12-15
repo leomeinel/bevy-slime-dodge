@@ -69,7 +69,7 @@ where
     #[serde(default)]
     shape: Option<String>,
     #[serde(default)]
-    width: Option<f32>,
+    pub(crate) width: Option<f32>,
     #[serde(default)]
     height: Option<f32>,
     #[serde(skip)]
@@ -78,7 +78,7 @@ where
 
 /// Handle for [`CollisionData`] as a generic
 #[derive(Resource)]
-pub(crate) struct CollisionHandle<T>(Handle<CollisionData<T>>)
+pub(crate) struct CollisionHandle<T>(pub(crate) Handle<CollisionData<T>>)
 where
     T: Reflectable;
 
@@ -107,16 +107,10 @@ impl Default for JumpTimer {
 pub(crate) struct VisualMap(pub(crate) HashMap<Entity, Entity>);
 
 /// Collider for different shapes
-pub(crate) fn collider<T>(
-    data: &Res<Assets<CollisionData<T>>>,
-    handle: &Res<CollisionHandle<T>>,
-) -> Collider
+pub(crate) fn collider<T>(data: &CollisionData<T>) -> Collider
 where
     T: Component + Default + Reflectable,
 {
-    // Get data from `CollisionData` with `CollisionHandle`
-    let data = data.get(handle.0.id()).unwrap();
-
     let (Some(shape), Some(width), Some(height)) = (data.shape.clone(), data.width, data.height)
     else {
         // Return default collider if data is not complete

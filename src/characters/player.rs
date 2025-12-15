@@ -22,7 +22,7 @@ use crate::{
     AppSystems, Pause,
     animations::{AnimationController, AnimationState, AnimationTimer, Animations},
     characters::{
-        CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement, VisualMap, collider,
+        CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement, VisualMap,
         tick_jump_timer,
     },
     impl_character_assets,
@@ -124,16 +124,12 @@ fn setup_player(mut commands: Commands, assets: Res<AssetServer>) {
 const WALK_SPEED: f32 = 80.;
 
 /// The player character.
-pub(crate) fn player(
-    collision_data: &Res<Assets<CollisionData<Player>>>,
-    collision_handle: &Res<CollisionHandle<Player>>,
-) -> impl Bundle {
+pub(crate) fn player() -> impl Bundle {
     (
         Name::new("Player"),
         Player,
         RigidBody::KinematicVelocityBased,
         GravityScale(0.),
-        collider::<Player>(collision_data, collision_handle),
         KinematicCharacterController {
             filter_flags: QueryFilterFlags::EXCLUDE_KINEMATIC,
             ..default()

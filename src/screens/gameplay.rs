@@ -13,11 +13,11 @@
 
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
-use crate::{Pause, levels::arena::spawn_arena, menus::Menu, screens::Screen};
+use crate::{Pause, levels::overworld::spawn_overworld, menus::Menu, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
     // Open gameplay screen
-    app.add_systems(OnEnter(Screen::Gameplay), spawn_arena);
+    app.add_systems(OnEnter(Screen::Gameplay), spawn_overworld);
 
     // Open pause on pressing P or Escape and pause game
     app.add_systems(

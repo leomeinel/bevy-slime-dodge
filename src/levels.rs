@@ -9,13 +9,13 @@
 
 //! Game worlds
 
-pub(crate) mod arena;
+pub(crate) mod overworld;
 
 use bevy::{color::palettes::tailwind, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     // Add child plugins
-    app.add_plugins(arena::plugin);
+    app.add_plugins(overworld::plugin);
 
     // Sort entities with `DynamicZ` by Y
     app.add_systems(PostUpdate, sort_by_y);

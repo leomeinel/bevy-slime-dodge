@@ -1,5 +1,5 @@
 /*
- * File: arena.rs
+ * File: overworld.rs
  * Author: Leopold Johannes Meinel (leo@meinel.dev)
  * -----
  * Copyright (c) 2025 Leopold Johannes Meinel & contributors
@@ -7,7 +7,7 @@
  * URL: https://www.apache.org/licenses/LICENSE-2.0
  */
 
-//! Arena-specific behavior.
+//! Overworld-specific behavior.
 
 use std::{f32::consts::FRAC_1_SQRT_2, ops::Range};
 
@@ -32,27 +32,27 @@ use crate::{
 
 pub(super) fn plugin(app: &mut App) {
     // Initialize asset state
-    app.init_state::<ArenaAssetState>();
+    app.init_state::<OverWorldAssetState>();
 
     // Add loading states via bevy_asset_loader
     app.add_loading_state(
-        LoadingState::new(ArenaAssetState::AssetLoading)
-            .continue_to_state(ArenaAssetState::Next)
-            .load_collection::<ArenaAssets>(),
+        LoadingState::new(OverWorldAssetState::AssetLoading)
+            .continue_to_state(OverWorldAssetState::Next)
+            .load_collection::<OverworldAssets>(),
     );
 }
 
 /// Asset state that tracks asset loading
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
-enum ArenaAssetState {
+enum OverWorldAssetState {
     #[default]
     AssetLoading,
     Next,
 }
 
-/// Assets for the arena
+/// Assets for the overworld
 #[derive(AssetCollection, Resource)]
-pub(crate) struct ArenaAssets {
+pub(crate) struct OverworldAssets {
     #[asset(path = "audio/music/bit-bit-loop.ogg")]
     music: Handle<AudioSource>,
 }
@@ -118,14 +118,14 @@ const PLAYER_POS: Vec3 = Vec3::new(0., 0., DEFAULT_Z);
 /// Player animation delay
 const PLAYER_ANIMATION_DELAY: Range<f32> = 1.0..5.0;
 
-/// Spawn arena with player, enemies and objects
-pub(crate) fn spawn_arena(
+/// Spawn overworld with player, enemies and objects
+pub(crate) fn spawn_overworld(
     mut animation_rng: Single<&mut WyRand, With<AnimationRng>>,
     mut commands: Commands,
     mut visual_map: ResMut<VisualMap>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    level_assets: Res<ArenaAssets>,
+    level_assets: Res<OverworldAssets>,
     player_animations: Res<Animations<Player>>,
     player_data: Res<Assets<CollisionData<Player>>>,
     player_handle: Res<CollisionHandle<Player>>,
@@ -249,7 +249,7 @@ pub(crate) fn spawn_arena(
     });
 }
 
-/// Border for the arena
+/// Border for the overworld
 fn border(
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<ColorMaterial>>,

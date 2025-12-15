@@ -19,7 +19,7 @@ use bevy_rapier2d::prelude::*;
 use bevy_spritesheet_animation::prelude::*;
 
 use crate::{
-    AppSystems, PausableSystems, Pause,
+    AppSystems, Pause,
     animations::{AnimationController, AnimationState, AnimationTimer, Animations},
     characters::{
         CharacterAssets, CollisionData, CollisionHandle, JumpTimer, Movement, VisualMap, collider,
@@ -60,8 +60,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             apply_jump
                 .before(PhysicsSet::SyncBackend)
-                .in_set(AppSystems::Update)
-                .in_set(PausableSystems),
+                .in_set(AppSystems::Update),
             limit_jump.after(tick_jump_timer),
         )
             .chain(),

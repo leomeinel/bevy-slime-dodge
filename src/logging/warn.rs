@@ -9,11 +9,17 @@
 
 //! This stores warning messages as consts
 
+/// Warning message if optional collision data is missing
+pub(crate) const CHARACTER_FALLBACK_COLLISION_DATA: &str =
+    "Missing some collision data for character. Using fallback ball collider.";
 /// Warning message if optional animation data is missing
-pub(crate) const MISSING_OPTIONAL_ANIMATION_DATA: &str =
+pub(crate) const CHARACTER_MISSING_OPTIONAL_ANIMATION_DATA: &str =
     "Missing some animation data for character.";
 /// Warning message if optional asset data is missing
-pub(crate) const MISSING_OPTIONAL_ASSET_DATA: &str = "Missing some assets data for character.";
-/// Warning message if optional collision data is missing
-pub(crate) const FALLBACK_COLLISION_DATA: &str =
-    "Missing some collision data for character. Using fallback ball collider.";
+pub(crate) const CHARACTER_MISSING_OPTIONAL_ASSET_DATA: &str =
+    "Missing some assets data for character.";
+
+/// Warning message if optional asset data is missing
+pub(crate) const LEVEL_MISSING_OPTIONAL_ASSET_DATA: &str = "Missing some assets data for level.";
+/// Warning message if optional tile data is missing
+pub(crate) const LEVEL_MISSING_OPTIONAL_TILE_DATA: &str = "Missing some tile data for level.";

@@ -11,11 +11,12 @@
 
 use std::{f32::consts::FRAC_1_SQRT_2, ops::Range};
 
-use bevy::{color::palettes::tailwind, prelude::*};
+use bevy::{color::palettes::tailwind, platform::collections::HashSet, prelude::*};
 use bevy_asset_loader::prelude::*;
+use bevy_common_assets::ron::RonAssetPlugin;
 use bevy_prng::WyRand;
 use bevy_rapier2d::prelude::*;
-use rand::Rng;
+use rand::{Rng, seq::IndexedRandom};
 
 use crate::{
     animations::{AnimationRng, Animations},
@@ -25,8 +26,15 @@ use crate::{
         npc::{Slime, slime, slime_visual},
         player::{Player, player, player_visual},
     },
-    levels::{DEFAULT_Z, DynamicZ, LEVEL_Z, SHADOW_COLOR, SHADOW_Z},
-    logging::warn::FALLBACK_COLLISION_DATA,
+    impl_level_assets,
+    levels::{
+        DEFAULT_Z, DynamicZ, LEVEL_Z, LevelAssets, LevelRng, SHADOW_COLOR, SHADOW_Z, TileData,
+        TileHandle,
+    },
+    logging::warn::{
+        CHARACTER_FALLBACK_COLLISION_DATA, LEVEL_MISSING_OPTIONAL_ASSET_DATA,
+        LEVEL_MISSING_OPTIONAL_TILE_DATA,
+    },
     screens::Screen,
 };
 
@@ -34,10 +42,19 @@ pub(super) fn plugin(app: &mut App) {
     // Initialize asset state
     app.init_state::<OverWorldAssetState>();
 
+    // Add plugin to load ron file
+    app.add_plugins((RonAssetPlugin::<TileData<Overworld>>::new(&["tiles.ron"]),));
+
+    // Setup overworld
+    app.add_systems(Startup, setup_overworld);
+
     // Add loading states via bevy_asset_loader
     app.add_loading_state(
         LoadingState::new(OverWorldAssetState::AssetLoading)
             .continue_to_state(OverWorldAssetState::Next)
+            .with_dynamic_assets_file::<StandardDynamicAssetCollection>(
+                "data/levels/overworld.assets.ron",
+            )
             .load_collection::<OverworldAssets>(),
     );
 }
@@ -53,8 +70,22 @@ enum OverWorldAssetState {
 /// Assets for the overworld
 #[derive(AssetCollection, Resource)]
 pub(crate) struct OverworldAssets {
-    #[asset(path = "audio/music/bit-bit-loop.ogg")]
-    music: Handle<AudioSource>,
+    #[asset(key = "overworld.music", collection(typed), optional)]
+    music: Option<Vec<Handle<AudioSource>>>,
+
+    #[asset(key = "overworld.tiles")]
+    pub(crate) tiles: Handle<Image>,
+}
+impl_level_assets!(OverworldAssets);
+
+/// Overworld marker
+#[derive(Component, Default, Reflect)]
+pub(crate) struct Overworld;
+
+/// Deserialize ron file for [`TileData`]
+fn setup_overworld(mut commands: Commands, assets: Res<AssetServer>) {
+    let handle = TileHandle::<Overworld>(assets.load("data/levels/overworld.tiles.ron"));
+    commands.insert_resource(handle);
 }
 
 /// rgb(107, 114, 128)
@@ -120,11 +151,12 @@ const PLAYER_ANIMATION_DELAY: Range<f32> = 1.0..5.0;
 
 /// Spawn overworld with player, enemies and objects
 pub(crate) fn spawn_overworld(
-    mut animation_rng: Single<&mut WyRand, With<AnimationRng>>,
+    mut animation_rng: Single<&mut WyRand, (With<AnimationRng>, Without<LevelRng>)>,
+    mut level_rng: Single<&mut WyRand, (With<LevelRng>, Without<AnimationRng>)>,
     mut commands: Commands,
-    mut visual_map: ResMut<VisualMap>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut visual_map: ResMut<VisualMap>,
     level_assets: Res<OverworldAssets>,
     player_animations: Res<Animations<Player>>,
     player_data: Res<Assets<CollisionData<Player>>>,
@@ -132,33 +164,62 @@ pub(crate) fn spawn_overworld(
     slime_animations: Res<Animations<Slime>>,
     slime_data: Res<Assets<CollisionData<Slime>>>,
     slime_handle: Res<CollisionHandle<Slime>>,
+    tile_data: Res<Assets<TileData<Overworld>>>,
+    tile_handle: Res<TileHandle<Overworld>>,
 ) {
+    // Get data from `TileData` with `TileHandle`
+    let tile_data = tile_data.get(tile_handle.0.id()).unwrap();
+    let (atlas_columns, atlas_rows) = (tile_data.atlas_columns, tile_data.atlas_rows);
+    let tiles = tile_data.get_tiles().unwrap_or_else(|| {
+        warn_once!("{}", LEVEL_MISSING_OPTIONAL_TILE_DATA);
+        // Return tuple of default `HashSet`s if data is missing
+        (
+            HashSet::default(),
+            HashSet::default(),
+            HashSet::default(),
+            HashSet::default(),
+            HashSet::default(),
+            HashSet::default(),
+        )
+    });
     // Get data from `CollisionData` with `CollisionHandle`
     let slime_data = slime_data.get(slime_handle.0.id()).unwrap();
     let slime_width = slime_data.width.unwrap_or_else(|| {
-        warn_once!("{}", FALLBACK_COLLISION_DATA);
+        warn_once!("{}", CHARACTER_FALLBACK_COLLISION_DATA);
         8.
     });
     let player_data = player_data.get(player_handle.0.id()).unwrap();
     let player_width = slime_data.width.unwrap_or_else(|| {
-        warn_once!("{}", FALLBACK_COLLISION_DATA);
+        warn_once!("{}", CHARACTER_FALLBACK_COLLISION_DATA);
         9.
     });
 
     let level = commands
         .spawn((
             Name::new("Level"),
+            Overworld,
             Mesh2d(meshes.add(Rectangle::new(GROUND_WIDTH_HEIGHT, GROUND_WIDTH_HEIGHT))),
             MeshMaterial2d(materials.add(Into::<Color>::into(GROUND_COLOR))),
             Transform::from_translation(LEVEL_POS),
             Visibility::default(),
             DespawnOnExit(Screen::Gameplay),
-            children![(
-                Name::new("Gameplay Music"),
-                music(level_assets.music.clone())
-            ),],
         ))
         .id();
+
+    if let Some(level_music) = level_assets
+        .get_music()
+        .clone()
+        .unwrap_or_else(|| {
+            warn_once!("{}", LEVEL_MISSING_OPTIONAL_ASSET_DATA);
+            Vec::default()
+        })
+        .choose(level_rng.as_mut())
+        .cloned()
+    {
+        commands.entity(level).with_children(|commands| {
+            commands.spawn((Name::new("Gameplay Music"), music(level_music)));
+        });
+    }
 
     for transform in BORDER_TRANSFORMS {
         commands.entity(level).with_children(|commands| {

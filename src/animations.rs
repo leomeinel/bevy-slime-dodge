@@ -32,7 +32,9 @@ use crate::{
     AppSystems,
     audio::sound_effect,
     characters::{CharacterAssets, JUMP_DURATION_SECS, Movement, VisualMap},
-    logging::warn::{MISSING_OPTIONAL_ANIMATION_DATA, MISSING_OPTIONAL_ASSET_DATA},
+    logging::warn::{
+        CHARACTER_MISSING_OPTIONAL_ANIMATION_DATA, CHARACTER_MISSING_OPTIONAL_ASSET_DATA,
+    },
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -410,7 +412,7 @@ fn choose_sound(
 ) -> Option<Handle<AudioSource>> {
     // Return `None` if frame data is missing or does not contain current frame
     let Some(frames) = frames else {
-        warn_once!("{}", MISSING_OPTIONAL_ANIMATION_DATA);
+        warn_once!("{}", CHARACTER_MISSING_OPTIONAL_ANIMATION_DATA);
         return None;
     };
     if !frames.contains(current_frame) {
@@ -419,7 +421,7 @@ fn choose_sound(
 
     // Return none if asset data is missing
     let Some(sounds) = sounds else {
-        warn_once!("{}", MISSING_OPTIONAL_ASSET_DATA);
+        warn_once!("{}", CHARACTER_MISSING_OPTIONAL_ASSET_DATA);
         return None;
     };
 

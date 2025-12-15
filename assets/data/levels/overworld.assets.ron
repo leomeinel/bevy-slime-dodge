@@ -1,0 +1,11 @@
+({
+    "overworld.music": Files (
+        paths: [
+            "audio/music/bit-bit-loop.ogg",
+        ],
+    ),
+    "overworld.tiles": Image (
+        path: "images/levels/overworld.webp",
+        sampler: Nearest,
+    ),
+})

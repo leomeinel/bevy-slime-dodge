@@ -17,7 +17,7 @@ use std::marker::PhantomData;
 use bevy::{platform::collections::HashMap, prelude::*, reflect::Reflectable};
 use bevy_rapier2d::prelude::*;
 
-use crate::{AppSystems, logging::warn::FALLBACK_COLLISION_DATA};
+use crate::{AppSystems, logging::warn::CHARACTER_FALLBACK_COLLISION_DATA};
 
 pub(super) fn plugin(app: &mut App) {
     // Insert `VisualMap`
@@ -114,7 +114,7 @@ where
     let (Some(shape), Some(width), Some(height)) = (data.shape.clone(), data.width, data.height)
     else {
         // Return default collider if data is not complete
-        warn_once!("{}", FALLBACK_COLLISION_DATA);
+        warn_once!("{}", CHARACTER_FALLBACK_COLLISION_DATA);
         return Collider::ball(12.);
     };
 

@@ -27,8 +27,8 @@ use crate::{
     },
     impl_level_assets,
     levels::{
-        ChunkController, DEFAULT_Z, DynamicZ, LEVEL_Z, LevelAssets, LevelRng, SHADOW_COLOR,
-        SHADOW_Z, TileData, TileHandle,
+        DEFAULT_Z, DynamicZ, LEVEL_Z, LevelAssets, LevelRng, SHADOW_COLOR, SHADOW_Z,
+        chunks::{ChunkController, TileData, TileHandle},
     },
     logging::warn::{CHARACTER_FALLBACK_COLLISION_DATA, LEVEL_MISSING_OPTIONAL_ASSET_DATA},
     screens::Screen,

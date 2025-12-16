@@ -16,9 +16,8 @@ use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use crate::{
     Pause,
     levels::{
-        delete_chunks, despawn_chunks,
+        chunks::{delete_chunks, despawn_chunks, spawn_chunks},
         overworld::{Overworld, OverworldAssets, spawn_overworld},
-        spawn_chunks,
     },
     menus::Menu,
     screens::Screen,

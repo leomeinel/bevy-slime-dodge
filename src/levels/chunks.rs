@@ -28,17 +28,17 @@ where
     tile_width: f32,
     tile_height: f32,
     #[serde(default)]
-    full_dirt_tiles: Option<HashSet<(u32, u32)>>,
+    full_dirt_tiles: Option<HashSet<UVec2>>,
     #[serde(default)]
-    full_grass_tiles: Option<HashSet<(u32, u32)>>,
+    full_grass_tiles: Option<HashSet<UVec2>>,
     #[serde(default)]
-    corner_outer_grass_to_dirt_tiles: Option<HashSet<(u32, u32)>>,
+    corner_outer_grass_to_dirt_tiles: Option<HashSet<UVec2>>,
     #[serde(default)]
-    corner_outer_dirt_to_grass_tiles: Option<HashSet<(u32, u32)>>,
+    corner_outer_dirt_to_grass_tiles: Option<HashSet<UVec2>>,
     #[serde(default)]
-    side_dirt_and_grass_tiles: Option<HashSet<(u32, u32)>>,
+    side_dirt_and_grass_tiles: Option<HashSet<UVec2>>,
     #[serde(default)]
-    diag_stripe_grass_in_dirt_tiles: Option<HashSet<(u32, u32)>>,
+    diag_stripe_grass_in_dirt_tiles: Option<HashSet<UVec2>>,
     #[serde(skip)]
     _phantom: PhantomData<T>,
 }
@@ -49,12 +49,12 @@ where
     fn get_tiles(
         &self,
     ) -> Option<(
-        HashSet<(u32, u32)>,
-        HashSet<(u32, u32)>,
-        HashSet<(u32, u32)>,
-        HashSet<(u32, u32)>,
-        HashSet<(u32, u32)>,
-        HashSet<(u32, u32)>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
     )> {
         Some((
             self.full_dirt_tiles.as_ref().cloned()?,

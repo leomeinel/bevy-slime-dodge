@@ -11,10 +11,13 @@
 
 pub(crate) mod chunks;
 pub(crate) mod overworld;
+pub(crate) mod procedural_spawning;
 
 use bevy::{color::palettes::tailwind, prelude::*};
 use bevy_prng::WyRand;
 use bevy_rand::{global::GlobalRng, traits::ForkableSeed as _};
+
+use crate::RES_HEIGHT;
 
 pub(super) fn plugin(app: &mut App) {
     // Add rng for levels
@@ -36,6 +39,9 @@ pub(crate) const LEVEL_Z: f32 = 1.;
 pub(crate) const SHADOW_Z: f32 = 9.;
 /// Z-level for any foreground object
 pub(crate) const DEFAULT_Z: f32 = 10.;
+
+/// Despawn range of chunks and npcs
+pub(crate) const DESPAWN_RANGE: f32 = RES_HEIGHT * 4.;
 
 /// Applies to anything that stores level assets
 pub(crate) trait LevelAssets {

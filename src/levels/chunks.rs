@@ -13,8 +13,8 @@ use bevy::{platform::collections::HashSet, prelude::*, reflect::Reflectable};
 use bevy_ecs_tilemap::prelude::*;
 
 use crate::{
-    CanvasCamera, RES_HEIGHT,
-    levels::{LEVEL_Z, LevelAssets},
+    CanvasCamera,
+    levels::{DESPAWN_RANGE, LEVEL_Z, LevelAssets},
     logging::warn::LEVEL_MISSING_OPTIONAL_TILE_DATA,
     screens::Screen,
 };
@@ -93,8 +93,6 @@ const RENDER_CHUNK_SIZE: UVec2 = UVec2 {
 };
 /// Render distance of chunks
 const RENDER_DISTANCE: i32 = 2;
-/// Despawn range of chunks
-const DESPAWN_RANGE: f32 = RES_HEIGHT * 4.;
 
 /// Spawn chunks around the [`CanvasCamera`]
 pub(crate) fn spawn_chunks<T, A>(
@@ -109,11 +107,8 @@ pub(crate) fn spawn_chunks<T, A>(
     A: LevelAssets + Resource,
 {
     // Get data from `TileData` with `TileHandle`
-    let data = data.get(handle.0.id()).unwrap();
-    let tile_size = TilemapTileSize {
-        x: data.tile_height,
-        y: data.tile_width,
-    };
+    let data: &TileData<T> = data.get(handle.0.id()).unwrap();
+    let tile_size = IVec2::new(data.tile_height as i32, data.tile_width as i32);
     // FIXME: Use this for conditional spawning/arranging
     let Some(_tiles) = data.get_tiles() else {
         // Return and do not spawn chunks if tiles are not configured correctly
@@ -122,21 +117,20 @@ pub(crate) fn spawn_chunks<T, A>(
     };
 
     // Get target translation for new chunk from camera translation
-    let camera_pos_ivec2 = &camera.translation.xy().as_ivec2();
-    let chunk_size_ivec2 = IVec2::new(CHUNK_SIZE.x as i32, CHUNK_SIZE.y as i32);
-    let tile_size_ivec2 = IVec2::new(tile_size.x as i32, tile_size.y as i32);
-    let chunk_pos = camera_pos_ivec2 / (chunk_size_ivec2 * tile_size_ivec2);
+    let camera_position = &camera.translation.xy().as_ivec2();
+    let chunk_size = IVec2::new(CHUNK_SIZE.x as i32, CHUNK_SIZE.y as i32);
+    let position = camera_position / (chunk_size * tile_size);
 
     // Spawn chunk behind and in front of chunk position if it does not contain a chunk already
-    for y in (chunk_pos.y - RENDER_DISTANCE)..(chunk_pos.y + RENDER_DISTANCE) {
-        for x in (chunk_pos.x - RENDER_DISTANCE)..(chunk_pos.x + RENDER_DISTANCE) {
+    for y in (position.y - RENDER_DISTANCE)..(position.y + RENDER_DISTANCE) {
+        for x in (position.x - RENDER_DISTANCE)..(position.x + RENDER_DISTANCE) {
             if !controller.chunks.contains(&IVec2::new(x, y)) {
                 controller.chunks.insert(IVec2::new(x, y));
                 spawn_chunk::<A>(
                     &mut commands,
                     &assets.0,
                     IVec2::new(x, y),
-                    tile_size,
+                    tile_size.as_vec2(),
                     TileTextureIndex(8),
                 );
             }
@@ -158,21 +152,21 @@ pub(crate) fn despawn_chunks<T>(
     T: Component + Default + Reflectable,
 {
     // Get data from `TileData` with `TileHandle`
-    let data = data.get(handle.0.id()).unwrap();
-    let tile_size = TilemapTileSize {
-        x: data.tile_height,
-        y: data.tile_width,
-    };
+    let data: &TileData<T> = data.get(handle.0.id()).unwrap();
+    let tile_size = Vec2::new(data.tile_height, data.tile_width);
 
     // Despawn chunks outside of `DESPAWN_RANGE`
     for (entity, chunk) in query.iter() {
-        let chunk_pos = chunk.translation.xy();
-        let distance = camera.translation.xy().distance(chunk_pos);
+        let position = chunk.translation.xy();
+        let distance = camera.translation.xy().distance(position);
 
         if distance > DESPAWN_RANGE {
-            let x = (chunk_pos.x / (CHUNK_SIZE.x as f32 * tile_size.x)).floor() as i32;
-            let y = (chunk_pos.y / (CHUNK_SIZE.y as f32 * tile_size.y)).floor() as i32;
-            controller.chunks.remove(&IVec2::new(x, y));
+            let chunk = &IVec2::new(
+                (position.x / (CHUNK_SIZE.x as f32 * tile_size.x)).floor() as i32,
+                (position.y / (CHUNK_SIZE.y as f32 * tile_size.y)).floor() as i32,
+            );
+
+            controller.chunks.remove(chunk);
             commands.entity(entity).despawn();
         }
     }
@@ -189,8 +183,8 @@ where
 fn spawn_chunk<A>(
     commands: &mut Commands,
     assets: &Res<A>,
-    chunk_pos: IVec2,
-    tile_size: TilemapTileSize,
+    position: IVec2,
+    tile_size: Vec2,
     texture_index: TileTextureIndex,
 ) where
     A: LevelAssets + Resource,
@@ -221,8 +215,8 @@ fn spawn_chunk<A>(
     }
 
     let transform = Transform::from_xyz(
-        chunk_pos.x as f32 * CHUNK_SIZE.x as f32 * tile_size.x,
-        chunk_pos.y as f32 * CHUNK_SIZE.y as f32 * tile_size.y,
+        position.x as f32 * CHUNK_SIZE.x as f32 * tile_size.x,
+        position.y as f32 * CHUNK_SIZE.y as f32 * tile_size.y,
         LEVEL_Z,
     );
     let handle = assets.get_tile_set().clone();
@@ -233,7 +227,7 @@ fn spawn_chunk<A>(
         size: CHUNK_SIZE.into(),
         storage,
         texture: TilemapTexture::Single(handle),
-        tile_size,
+        tile_size: tile_size.into(),
         transform,
         render_settings: TilemapRenderSettings {
             render_chunk_size: RENDER_CHUNK_SIZE,

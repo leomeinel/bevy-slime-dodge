@@ -7,67 +7,38 @@
  * URL: https://www.apache.org/licenses/LICENSE-2.0
  */
 
-use std::marker::PhantomData;
-
-use bevy::{platform::collections::HashSet, prelude::*};
+use bevy::prelude::*;
 use bevy_prng::WyRand;
 use rand::{Rng as _, seq::IndexedRandom as _};
 
 use crate::{
-    AppSystems, CanvasCamera,
     characters::{
         Character, CollisionData, CollisionHandle, Shadow, VisualMap,
         animations::{ANIMATION_DELAY_RANGE, AnimationRng, Animations},
     },
-    levels::{DEFAULT_Z, Level, RENDER_DISTANCE},
+    levels::{DEFAULT_Z, Level},
     logging::error::{ERR_LOADING_COLLISION_DATA, ERR_LOADING_TILE_DATA},
-    procgen::ChunkRng,
-    procgen::level::{CHUNK_SIZE, ChunkController, TileData, TileHandle},
+    procgen::{
+        ProcGenController, ProcGenRng, ProcGenTimer, TileData, TileHandle, chunks::CHUNK_SIZE,
+    },
 };
 
-pub(super) fn plugin(app: &mut App) {
-    // Setup timer
-    app.insert_resource(SpawnTimer::default());
-    app.add_systems(Update, tick_spawn_timer.in_set(AppSystems::TickTimers));
-}
-
-/// Spawn controller that stores positions of spawned entities
-#[derive(Default, Debug, Resource)]
-pub(crate) struct SpawnController<T> {
-    pub(crate) positions: HashSet<IVec2>,
-    _phantom: PhantomData<T>,
-}
-
-/// Interval for generating chunks
-const SPAWN_INTERVAL: f32 = 2.;
-
-/// Timer that tracks chunk generation
-#[derive(Resource, Debug, Clone, PartialEq, Reflect)]
-#[reflect(Resource)]
-pub(crate) struct SpawnTimer(Timer);
-impl Default for SpawnTimer {
-    fn default() -> Self {
-        Self(Timer::from_seconds(SPAWN_INTERVAL, TimerMode::Repeating))
-    }
-}
-
-// TODO: Think about using generics to avoid code duplication
-/// Spawn chunks around the [`CanvasCamera`]
+/// Spawn characters in every chunk contained in [`ProcGenController<A>`]
 pub(crate) fn spawn_characters<T, A>(
-    mut animation_rng: Single<&mut WyRand, (With<AnimationRng>, Without<ChunkRng>)>,
-    mut rng: Single<&mut WyRand, (With<ChunkRng>, Without<AnimationRng>)>,
+    mut animation_rng: Single<&mut WyRand, (With<AnimationRng>, Without<ProcGenRng>)>,
+    mut rng: Single<&mut WyRand, (With<ProcGenRng>, Without<AnimationRng>)>,
     level: Single<Entity, With<A>>,
     mut commands: Commands,
-    mut controller: ResMut<SpawnController<T>>,
+    mut controller: ResMut<ProcGenController<T>>,
     mut visual_map: ResMut<VisualMap>,
     animations: Res<Animations<T>>,
-    chunk_controller: Res<ChunkController<A>>,
+    chunk_controller: Res<ProcGenController<A>>,
     collision_data: Res<Assets<CollisionData<T>>>,
     collision_handle: Res<CollisionHandle<T>>,
     shadow: Res<Shadow<T>>,
     tile_data: Res<Assets<TileData<A>>>,
     tile_handle: Res<TileHandle<A>>,
-    timer: Res<SpawnTimer>,
+    timer: Res<ProcGenTimer>,
 ) where
     T: Character,
     A: Level,
@@ -116,60 +87,6 @@ pub(crate) fn spawn_characters<T, A>(
     }
 }
 
-// TODO: Think about using generics to avoid code duplication
-//       It is quite hard to implement a system where we just use contained values in chunk controller
-//       to determine despawning since we also need to despawn the correct entity and check moving position.
-/// Despawn characters
-///
-/// This removes the coordinates from [`SpawnController`] and despawns the entity.
-pub(crate) fn despawn_characters<T, A>(
-    camera: Single<&Transform, (With<CanvasCamera>, Without<T>)>,
-    query: Query<(Entity, &Transform), (With<T>, Without<CanvasCamera>)>,
-    mut commands: Commands,
-    mut controller: ResMut<SpawnController<T>>,
-    data: Res<Assets<TileData<A>>>,
-    handle: Res<TileHandle<A>>,
-    timer: Res<SpawnTimer>,
-) where
-    T: Character,
-    A: Level,
-{
-    // Return if timer has not finished
-    if !timer.0.just_finished() {
-        return;
-    }
-
-    // Get data from `TileData` with `TileHandle`
-    let data = data.get(handle.0.id()).expect(ERR_LOADING_TILE_DATA);
-    let tile_size = Vec2::new(data.tile_height, data.tile_width);
-
-    // Despawn chunks outside of `DESPAWN_RANGE`
-    for (entity, transform) in query.iter() {
-        let pos = transform.translation.xy();
-        let distance = camera.translation.xy().distance(pos);
-        let despawn_range = RENDER_DISTANCE as f32 * CHUNK_SIZE.x as f32 * tile_size.x;
-
-        if distance > despawn_range {
-            let pos = &IVec2::new(
-                (pos.x / (CHUNK_SIZE.x as f32 * tile_size.x)).floor() as i32,
-                (pos.y / (CHUNK_SIZE.y as f32 * tile_size.y)).floor() as i32,
-            );
-
-            controller.positions.remove(pos);
-            commands.entity(entity).despawn();
-        }
-    }
-}
-
-// TODO: Think about using generics to avoid code duplication
-/// Clear [SpawnController]
-pub(crate) fn clear_spawn_points<T>(mut controller: ResMut<SpawnController<T>>)
-where
-    T: Character,
-{
-    controller.positions.clear();
-}
-
 /// Number of characters to spawn per chunk
 const CHARACTERS_PER_CHUNK: usize = 4;
 
@@ -214,9 +131,4 @@ fn spawn_character<T>(
         );
         commands.entity(container).add_child(entity);
     }
-}
-
-/// Tick spawn timer
-fn tick_spawn_timer(mut timer: ResMut<SpawnTimer>, time: Res<Time>) {
-    timer.0.tick(time.delta());
 }

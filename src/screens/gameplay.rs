@@ -19,8 +19,7 @@ use crate::{
     levels::overworld::{Overworld, OverworldAssets, spawn_overworld},
     menus::Menu,
     procgen::{
-        level::{clear_chunks, despawn_chunks, spawn_chunks},
-        spawn::{clear_spawn_points, despawn_characters, spawn_characters},
+        chunks::spawn_chunks, clear_procgen_controller, despawn_procgen, spawn::spawn_characters,
     },
     screens::Screen,
 };
@@ -37,9 +36,9 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (
             spawn_chunks::<Overworld, OverworldAssets>,
-            despawn_chunks::<Overworld>,
+            despawn_procgen::<Overworld, Overworld>,
             spawn_characters::<Slime, Overworld>,
-            despawn_characters::<Slime, Overworld>,
+            despawn_procgen::<Slime, Overworld>,
         )
             .run_if(in_state(Screen::Gameplay)),
     );
@@ -67,8 +66,8 @@ pub(super) fn plugin(app: &mut App) {
         (
             close_menu,
             unpause,
-            clear_chunks::<Overworld>,
-            clear_spawn_points::<Slime>,
+            clear_procgen_controller::<Overworld>,
+            clear_procgen_controller::<Slime>,
         ),
     );
 

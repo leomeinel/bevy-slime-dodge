@@ -25,14 +25,14 @@ use crate::{
     impl_level_assets,
     levels::{DEFAULT_Z, LEVEL_Z, Level, LevelAssets, LevelRng},
     logging::{error::ERR_LOADING_COLLISION_DATA, warn::WARN_INCOMPLETE_ASSET_DATA},
-    procgen::{level::ChunkController, spawn::SpawnController},
+    procgen::ProcGenController,
     screens::Screen,
 };
 
 pub(super) fn plugin(app: &mut App) {
     // Add `ChunkController` and `SpawnController`
-    app.insert_resource(ChunkController::<Overworld>::default());
-    app.insert_resource(SpawnController::<Slime>::default());
+    app.insert_resource(ProcGenController::<Overworld>::default());
+    app.insert_resource(ProcGenController::<Slime>::default());
 }
 
 /// Assets for the overworld

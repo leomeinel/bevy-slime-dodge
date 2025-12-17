@@ -7,26 +7,161 @@
  * URL: https://www.apache.org/licenses/LICENSE-2.0
  */
 
-pub(crate) mod level;
+pub(crate) mod chunks;
 pub(crate) mod spawn;
 
-use bevy::prelude::*;
+use std::marker::PhantomData;
+
+use bevy::{platform::collections::HashSet, prelude::*, reflect::Reflectable};
 use bevy_prng::WyRand;
 use bevy_rand::{global::GlobalRng, traits::ForkableSeed as _};
 
+use crate::{
+    AppSystems, CanvasCamera, levels::RENDER_DISTANCE, logging::error::ERR_LOADING_TILE_DATA,
+    procgen::chunks::CHUNK_SIZE,
+};
+
 pub(super) fn plugin(app: &mut App) {
+    // Setup timer
+    app.insert_resource(ProcGenTimer::default());
+    app.add_systems(Update, tick_procgen_timer.in_set(AppSystems::TickTimers));
+
     // Add rng for chunks
     app.add_systems(Startup, setup_rng);
-
-    // Add child plugins
-    app.add_plugins((level::plugin, spawn::plugin));
 }
 
-/// Rng for animations
-#[derive(Component)]
-pub(crate) struct ChunkRng;
+/// Spawn controller that stores positions of spawned entities
+#[derive(Default, Debug, Resource)]
+pub(crate) struct ProcGenController<T> {
+    pub(crate) positions: HashSet<IVec2>,
+    _phantom: PhantomData<T>,
+}
 
-/// Spawn [`ChunkRng`] by forking [`GlobalRng`]
+/// Timer that tracks chunk generation
+#[derive(Resource, Debug, Clone, PartialEq, Reflect)]
+#[reflect(Resource)]
+pub(crate) struct ProcGenTimer(Timer);
+impl Default for ProcGenTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(PROCGEN_INTERVAL, TimerMode::Repeating))
+    }
+}
+
+/// Interval for procedural generation
+pub(crate) const PROCGEN_INTERVAL: f32 = 2.;
+
+/// Animation data deserialized from a ron file as a generic
+#[derive(serde::Deserialize, Asset, TypePath, Default)]
+pub(crate) struct TileData<T>
+where
+    T: Reflectable,
+{
+    pub(crate) tile_width: f32,
+    pub(crate) tile_height: f32,
+    #[serde(default)]
+    full_dirt_tiles: Option<HashSet<UVec2>>,
+    #[serde(default)]
+    full_grass_tiles: Option<HashSet<UVec2>>,
+    #[serde(default)]
+    corner_outer_grass_to_dirt_tiles: Option<HashSet<UVec2>>,
+    #[serde(default)]
+    corner_outer_dirt_to_grass_tiles: Option<HashSet<UVec2>>,
+    #[serde(default)]
+    side_dirt_and_grass_tiles: Option<HashSet<UVec2>>,
+    #[serde(default)]
+    diag_stripe_grass_in_dirt_tiles: Option<HashSet<UVec2>>,
+    #[serde(skip)]
+    _phantom: PhantomData<T>,
+}
+impl<T> TileData<T>
+where
+    T: Reflectable,
+{
+    fn get_tiles(
+        &self,
+    ) -> Option<(
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+        HashSet<UVec2>,
+    )> {
+        Some((
+            self.full_dirt_tiles.as_ref().cloned()?,
+            self.full_grass_tiles.as_ref().cloned()?,
+            self.corner_outer_grass_to_dirt_tiles.as_ref().cloned()?,
+            self.corner_outer_dirt_to_grass_tiles.as_ref().cloned()?,
+            self.side_dirt_and_grass_tiles.as_ref().cloned()?,
+            self.diag_stripe_grass_in_dirt_tiles.as_ref().cloned()?,
+        ))
+    }
+}
+
+/// Handle for [`TileData`] as a generic
+#[derive(Resource)]
+pub(crate) struct TileHandle<T>(pub(crate) Handle<TileData<T>>)
+where
+    T: Reflectable;
+
+/// Rng for procedural generation
+#[derive(Component)]
+pub(crate) struct ProcGenRng;
+
+/// Despawn procedurally generated entities outside of [`RENDER_DISTANCE`] and remove entries in controller
+pub(crate) fn despawn_procgen<T, A>(
+    camera: Single<&Transform, (With<CanvasCamera>, Without<T>)>,
+    query: Query<(Entity, &Transform), (With<T>, Without<CanvasCamera>)>,
+    mut commands: Commands,
+    mut controller: ResMut<ProcGenController<T>>,
+    data: Res<Assets<TileData<A>>>,
+    handle: Res<TileHandle<A>>,
+    timer: Res<ProcGenTimer>,
+) where
+    T: Component + Default + Reflectable,
+    A: Component + Default + Reflectable,
+{
+    // Return if timer has not finished
+    if !timer.0.just_finished() {
+        return;
+    }
+
+    // Get data from `TileData` with `TileHandle`
+    let data = data.get(handle.0.id()).expect(ERR_LOADING_TILE_DATA);
+    let tile_size = Vec2::new(data.tile_height, data.tile_width);
+
+    // Despawn chunks outside of `DESPAWN_RANGE`
+    for (entity, transform) in query.iter() {
+        let pos = transform.translation.xy();
+        let distance = camera.translation.xy().distance(pos);
+        let despawn_range = RENDER_DISTANCE as f32 * CHUNK_SIZE.x as f32 * tile_size.x;
+
+        if distance > despawn_range {
+            let pos = &IVec2::new(
+                (pos.x / (CHUNK_SIZE.x as f32 * tile_size.x)).floor() as i32,
+                (pos.y / (CHUNK_SIZE.y as f32 * tile_size.y)).floor() as i32,
+            );
+
+            controller.positions.remove(pos);
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// Clear [`ProcGenController<T>`]
+pub(crate) fn clear_procgen_controller<T>(mut controller: ResMut<ProcGenController<T>>)
+where
+    T: Component + Default + Reflectable,
+{
+    controller.positions.clear();
+}
+
+/// Spawn [`ProcGenRng`] by forking [`GlobalRng`]
 fn setup_rng(mut global: Single<&mut WyRand, With<GlobalRng>>, mut commands: Commands) {
-    commands.spawn((ChunkRng, global.fork_seed()));
+    commands.spawn((ProcGenRng, global.fork_seed()));
+}
+
+/// Tick chunk timer
+fn tick_procgen_timer(mut timer: ResMut<ProcGenTimer>, time: Res<Time>) {
+    timer.0.tick(time.delta());
 }

@@ -28,7 +28,7 @@ use crate::{
     },
     levels::overworld::{Overworld, OverworldAssets},
     menus::credits::CreditsAssets,
-    procgen::level::{TileData, TileHandle},
+    procgen::{TileData, TileHandle},
     screens::{Screen, splash::SplashAssets},
     theme::{interaction::InteractionAssets, prelude::*},
 };

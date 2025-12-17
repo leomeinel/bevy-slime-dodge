@@ -173,6 +173,8 @@ where
 /// Number of characters to spawn per chunk
 const CHARACTERS_PER_CHUNK: usize = 4;
 
+// FIXME: There has to be some logic error. Spawning seems to not actually use random positions.
+//        Character spawn on top of each other or pile up.
 /// Spawn characters in a chunk
 fn spawn_character<T>(
     animation_rng: &mut WyRand,

@@ -19,7 +19,7 @@
 
 use std::{marker::PhantomData, ops::Range};
 
-use bevy::{prelude::*, reflect::Reflectable};
+use bevy::prelude::*;
 use bevy_prng::WyRand;
 use bevy_rand::{global::GlobalRng, traits::ForkableSeed as _};
 use bevy_spritesheet_animation::prelude::*;
@@ -52,11 +52,15 @@ pub(super) fn plugin(app: &mut App) {
 /// Player animation delay
 pub(crate) const ANIMATION_DELAY_RANGE: Range<f32> = 0.0..10.0;
 
-/// Animation data deserialized from a ron file as a generic
+/// Animation data deserialized from a ron file as a generic.
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 #[derive(serde::Deserialize, Asset, TypePath, Default)]
 pub(crate) struct AnimationData<T>
 where
-    T: Reflectable,
+    T: Character,
 {
     atlas_columns: usize,
     atlas_rows: usize,
@@ -91,16 +95,27 @@ where
 }
 
 /// Handle for [`AnimationData`] as a generic
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 #[derive(Resource)]
 pub(crate) struct AnimationHandle<T>(pub(crate) Handle<AnimationData<T>>)
 where
-    T: Reflectable;
+    T: Character;
 
 /// Animations with generics
 ///
 /// This serves as the main interface for other modules
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 #[derive(Resource, Default)]
-pub(crate) struct Animations<T> {
+pub(crate) struct Animations<T>
+where
+    T: Character,
+{
     pub(crate) sprite: Sprite,
     pub(crate) idle: Handle<Animation>,
     pub(crate) walk: Option<Handle<Animation>>,
@@ -151,6 +166,11 @@ fn setup_rng(mut global: Single<&mut WyRand, With<GlobalRng>>, mut commands: Com
 }
 
 /// Setup the [`Animations`] struct and add animations
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
+/// - `A` must implement [`CharacterAssets`]
 pub(crate) fn setup_animations<T, A>(
     mut commands: Commands,
     mut atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
@@ -280,6 +300,10 @@ pub(crate) fn tick_animation_timer(mut query: Query<&mut AnimationTimer>, time: 
 }
 
 /// Update animations
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 pub(crate) fn update_animations<T>(
     parent_query: Query<(Entity, &mut Movement), With<T>>,
     mut child_query: Query<
@@ -379,6 +403,11 @@ pub(crate) fn update_animations<T>(
 }
 
 /// Update animation sounds
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
+/// - `A` must implement [`CharacterAssets`]
 pub(crate) fn update_animation_sounds<T, A>(
     mut rng: Single<&mut WyRand, With<AnimationRng>>,
     parent_query: Query<Entity, With<T>>,

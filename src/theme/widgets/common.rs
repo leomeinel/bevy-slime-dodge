@@ -60,6 +60,20 @@ pub(crate) fn label(text: impl Into<String>) -> impl Bundle {
 }
 
 /// A large rounded button with text and an action defined as an [`Observer`].
+///
+/// ## Traits
+///
+/// - `E` must implement [`EntityEvent`].
+/// - `B` must implement [`Bundle`].
+/// - `I` must implement [`IntoObserverSystem<E, B, M>`].
+///
+/// ## Examples
+///
+/// `I` is meant to be used like this:
+///
+/// ```
+/// let action = IntoObserverSystem::into_system(action);
+/// ```
 pub(crate) fn button<E, B, M, I>(text: impl Into<String>, action: I) -> impl Bundle
 where
     E: EntityEvent,
@@ -83,6 +97,20 @@ where
 }
 
 /// A small square button with text and an action defined as an [`Observer`].
+///
+/// ## Traits
+///
+/// - `E` must implement [`EntityEvent`].
+/// - `B` must implement [`Bundle`].
+/// - `I` must implement [`IntoObserverSystem<E, B, M>`].
+///
+/// ## Examples
+///
+/// `I` is meant to be used like this:
+///
+/// ```
+/// let action = IntoObserverSystem::into_system(action);
+/// ```
 pub(crate) fn button_small<E, B, M, I>(text: impl Into<String>, action: I) -> impl Bundle
 where
     E: EntityEvent,
@@ -103,6 +131,12 @@ where
 }
 
 /// A simple button with text and an action defined as an [`Observer`]. The button's layout is provided by `button_bundle`.
+///
+/// ## Traits
+///
+/// - `E` must implement [`EntityEvent`].
+/// - `B` must implement [`Bundle`].
+/// - `I` must implement [`IntoObserverSystem<E, B, M>`].
 fn button_base<E, B, M, I>(
     text: impl Into<String>,
     action: I,

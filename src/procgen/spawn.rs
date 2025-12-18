@@ -25,6 +25,12 @@ use crate::{
 };
 
 /// Spawn characters in every chunk contained in [`ProcGenController<A>`]
+///
+/// ## Traits
+///
+/// - `T` must implement '[`Character`] + [`ProcGenerated`]' and is used as the procedurally generated character associated with a [`ProcGenController<T>`].
+/// - `A` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
+/// - `B` must implement [`Level`].
 pub(crate) fn spawn_characters<T, A, B>(
     mut animation_rng: Single<&mut WyRand, (With<AnimationRng>, Without<ProcGenRng>)>,
     mut rng: Single<&mut WyRand, (With<ProcGenRng>, Without<AnimationRng>)>,
@@ -41,9 +47,9 @@ pub(crate) fn spawn_characters<T, A, B>(
     tile_handle: Res<TileHandle<A>>,
     timer: Res<ProcGenTimer>,
 ) where
-    T: Character + ProcGenerated, // Procedurally generated character
-    A: ProcGenerated,             // Procedurally generated level
-    B: Level,                     // Container level
+    T: Character + ProcGenerated,
+    A: ProcGenerated,
+    B: Level,
 {
     // Return if timer has not finished
     if !timer.0.just_finished() {
@@ -95,6 +101,10 @@ const CHARACTERS_PER_CHUNK: usize = 4;
 // FIXME: There has to be some logic error. Spawning seems to not actually use random positions.
 //        Character spawn on top of each other or pile up.
 /// Spawn characters in a chunk
+///
+/// ## Traits
+///
+/// - `T` must implement '[`Character`] + [`ProcGenerated`]' and is used as the procedurally generated character.
 fn spawn_character<T>(
     animation_rng: &mut WyRand,
     rng: &mut WyRand,
@@ -107,7 +117,7 @@ fn spawn_character<T>(
     chunk_pos: &Vec2,
     tile_size: &Vec2,
 ) where
-    T: Character + ProcGenerated, // Procedurally generated character
+    T: Character + ProcGenerated,
 {
     // Choose a number of target chunk tile origins to determine spawn positions
     let target_origins: Vec<(u32, u32)> = (0..CHUNK_SIZE.x)

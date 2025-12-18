@@ -38,6 +38,10 @@ where
 }
 
 /// Spawn controller that stores positions of spawned entities
+///
+/// ## Traits
+///
+/// - `T` must implement [`ProcGenerated`] and is used as any procedurally generated item.
 #[derive(Default, Debug, Resource)]
 pub(crate) struct ProcGenController<T>
 where
@@ -61,6 +65,10 @@ impl Default for ProcGenTimer {
 pub(crate) const PROCGEN_INTERVAL: f32 = 2.;
 
 /// Animation data deserialized from a ron file as a generic
+///
+/// ## Traits
+///
+/// - `T` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
 #[derive(serde::Deserialize, Asset, TypePath, Default)]
 pub(crate) struct TileData<T>
 where
@@ -109,6 +117,10 @@ where
 }
 
 /// Handle for [`TileData`] as a generic
+///
+/// ## Traits
+///
+/// - `T` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
 #[derive(Resource)]
 pub(crate) struct TileHandle<T>(pub(crate) Handle<TileData<T>>)
 where
@@ -119,6 +131,11 @@ where
 pub(crate) struct ProcGenRng;
 
 /// Despawn procedurally generated entities outside of [`RENDER_DISTANCE`] and remove entries in controller
+///
+/// ## Traits
+///
+/// - `T` must implement [`ProcGenerated`] and is used as the procedurally generated item associated with a [`ProcGenController<T>`].
+/// - `A` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
 pub(crate) fn despawn_procgen<T, A>(
     camera: Single<&Transform, (With<CanvasCamera>, Without<T>)>,
     query: Query<(Entity, &Transform), (With<T>, Without<CanvasCamera>)>,
@@ -128,8 +145,8 @@ pub(crate) fn despawn_procgen<T, A>(
     handle: Res<TileHandle<A>>,
     timer: Res<ProcGenTimer>,
 ) where
-    T: ProcGenerated, // Procedurally generated character or level
-    A: ProcGenerated, // Procedurally generated level
+    T: ProcGenerated,
+    A: ProcGenerated,
 {
     // Return if timer has not finished
     if !timer.0.just_finished() {
@@ -159,9 +176,13 @@ pub(crate) fn despawn_procgen<T, A>(
 }
 
 /// Clear [`ProcGenController<T>`]
+///
+/// ## Traits
+///
+/// - `T` must implement [`ProcGenerated`] and is used as the procedurally generated item associated with a [`ProcGenController<T>`].
 pub(crate) fn clear_procgen_controller<T>(mut controller: ResMut<ProcGenController<T>>)
 where
-    T: ProcGenerated, // Procedurally generated item stored in controller
+    T: ProcGenerated,
 {
     controller.positions.clear();
 }

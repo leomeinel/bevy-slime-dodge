@@ -140,10 +140,14 @@ where
 }
 
 /// Animation data deserialized from a ron file as a generic
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 #[derive(serde::Deserialize, Asset, TypePath, Default)]
 pub(crate) struct CollisionData<T>
 where
-    T: Reflectable,
+    T: Character,
 {
     #[serde(default)]
     pub(crate) shape: Option<String>,
@@ -156,10 +160,14 @@ where
 }
 
 /// Handle for [`CollisionData`] as a generic
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 #[derive(Resource)]
 pub(crate) struct CollisionHandle<T>(pub(crate) Handle<CollisionData<T>>)
 where
-    T: Reflectable;
+    T: Character;
 
 /// Current data about movement
 #[derive(Component, Default)]
@@ -186,8 +194,15 @@ impl Default for JumpTimer {
 pub(crate) struct VisualMap(pub(crate) HashMap<Entity, Entity>);
 
 /// Shadow data for characters
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 #[derive(Resource, Default, Debug)]
-pub(crate) struct Shadow<T> {
+pub(crate) struct Shadow<T>
+where
+    T: Character,
+{
     mesh: Handle<Mesh>,
     material: Handle<ColorMaterial>,
     _phantom: PhantomData<T>,
@@ -197,6 +212,10 @@ pub(crate) struct Shadow<T> {
 const SHADOW_COLOR: Srgba = tailwind::GRAY_700;
 
 /// Setup [`Shadow`]
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 pub(crate) fn setup_shadow<T>(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -223,6 +242,10 @@ pub(crate) fn setup_shadow<T>(
 }
 
 /// Collider for different shapes
+///
+/// ## Traits
+///
+/// - `T` must implement [`Character`].
 pub(crate) fn character_collider<T>(data: &(Option<String>, Option<f32>, Option<f32>)) -> Collider
 where
     T: Character,

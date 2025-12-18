@@ -28,6 +28,11 @@ const RENDER_CHUNK_SIZE: UVec2 = UVec2 {
 };
 
 /// Spawn chunks around the [`CanvasCamera`]
+///
+/// ## Traits
+///
+/// - `T` must implement [`ProcGenerated`]' and is used as the procedurally generated level associated with a [`ProcGenController<T>`].
+/// - `A` must implement [`LevelAssets`] and is used as a level's assets.
 pub(crate) fn spawn_chunks<T, A>(
     camera: Single<&Transform, With<CanvasCamera>>,
     mut commands: Commands,
@@ -37,8 +42,8 @@ pub(crate) fn spawn_chunks<T, A>(
     assets: Res<A>,
     timer: Res<ProcGenTimer>,
 ) where
-    T: ProcGenerated, // Procedurally generated level
-    A: LevelAssets,   // Level assets
+    T: ProcGenerated,
+    A: LevelAssets,
 {
     // Return if timer has not finished
     if !timer.0.just_finished() {
@@ -82,6 +87,11 @@ pub(crate) fn spawn_chunks<T, A>(
 }
 
 /// Spawn a single chunk
+///
+/// ## Traits
+///
+/// - `T` must implement [`ProcGenerated`]' and is used as a level's procedurally generated item.
+/// - `A` must implement [`LevelAssets`] and is used as a level's assets.
 fn spawn_chunk<T, A>(
     commands: &mut Commands,
     assets: &Res<A>,
@@ -89,8 +99,8 @@ fn spawn_chunk<T, A>(
     tile_size: Vec2,
     texture_index: TileTextureIndex,
 ) where
-    T: ProcGenerated, // Procedurally generated level
-    A: LevelAssets,   // Level assets
+    T: ProcGenerated,
+    A: LevelAssets,
 {
     // Create empty entity and storage dedicated to this chunk
     let container = commands.spawn(DespawnOnExit(Screen::Gameplay)).id();

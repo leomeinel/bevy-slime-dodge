@@ -139,7 +139,7 @@ where
 #[derive(Component)]
 pub(crate) struct ProcGenRng;
 
-/// Despawn procedurally generated entities outside of [`RENDER_DISTANCE`] and remove entries in controller
+/// Despawn procedurally generated entities outside of [`PROCGEN_DISTANCE`] and remove entries in controller
 ///
 /// ## Traits
 ///

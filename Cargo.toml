@@ -27,7 +27,7 @@ serde = "1.0.228"
 # Compile out low-severity logs to improve performance.
 # Remove these features if you want to profile your game with tracy.
 # (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
-tracing = { version = "0.1", features = [
+tracing = { version = "0.1.44", features = [
  "max_level_debug",
  "release_max_level_warn",
 ] }

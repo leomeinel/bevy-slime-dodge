@@ -25,7 +25,7 @@ use bevy_spritesheet_animation::prelude::SpritesheetAnimation;
 use crate::{
     AppSystems,
     characters::animations::{AnimationController, AnimationTimer, Animations},
-    levels::{DEFAULT_Z, DynamicZ, SHADOW_Z},
+    levels::{DEFAULT_Z, SHADOW_Z, YSort},
     logging::{error::ERR_LOADING_COLLISION_DATA, warn::WARN_INCOMPLETE_COLLISION_DATA_FALLBACK},
 };
 
@@ -81,7 +81,7 @@ where
     fn container_bundle(
         &self,
         data: &(Option<String>, Option<f32>, Option<f32>),
-        pos: Vec3,
+        pos: Vec2,
     ) -> impl Bundle;
 
     fn visual_bundle(
@@ -90,7 +90,7 @@ where
         animation_delay: f32,
     ) -> impl Bundle {
         (
-            DynamicZ(DEFAULT_Z),
+            YSort(DEFAULT_Z),
             animations.sprite.clone(),
             SpritesheetAnimation::new(animations.idle.clone()),
             AnimationController::default(),
@@ -100,7 +100,7 @@ where
 
     fn shadow_bundle(&self, shadow: &Res<Shadow<Self>>, width: f32) -> impl Bundle {
         (
-            DynamicZ(SHADOW_Z),
+            YSort(SHADOW_Z),
             Transform::from_xyz(0., -width / 2., SHADOW_Z),
             Mesh2d(shadow.mesh.clone()),
             MeshMaterial2d(shadow.material.clone()),
@@ -111,16 +111,13 @@ where
         commands: &mut Commands,
         visual_map: &mut ResMut<VisualMap>,
         data: &(Option<String>, Option<f32>, Option<f32>),
-        pos: Vec3,
+        pos: Vec2,
         animations: &Res<Animations<Self>>,
         shadow: &Res<Shadow<Self>>,
         animation_delay: f32,
     ) -> Entity {
         let character = Self::default();
-
-        let container = commands
-            .spawn((character.container_bundle(data, pos),))
-            .id();
+        let container = commands.spawn(character.container_bundle(data, pos)).id();
 
         let visual = commands
             .spawn(character.visual_bundle(animations, animation_delay))
@@ -130,7 +127,7 @@ where
 
         let width = data.1.unwrap_or_else(|| {
             warn_once!("{}", WARN_INCOMPLETE_COLLISION_DATA_FALLBACK);
-            9.
+            24.
         });
         let shadow = commands.spawn(character.shadow_bundle(shadow, width)).id();
         commands.entity(container).add_child(shadow);
@@ -229,7 +226,7 @@ pub(crate) fn setup_shadow<T>(
     let data = data.get(handle.0.id()).expect(ERR_LOADING_COLLISION_DATA);
     let width = data.width.unwrap_or_else(|| {
         warn_once!("{}", WARN_INCOMPLETE_COLLISION_DATA_FALLBACK);
-        9.
+        24.
     });
 
     let resource = Shadow::<T> {

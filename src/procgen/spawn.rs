@@ -16,7 +16,7 @@ use crate::{
         Character, CollisionData, CollisionHandle, Shadow, VisualMap,
         animations::{ANIMATION_DELAY_RANGE, AnimationRng, Animations},
     },
-    levels::{DEFAULT_Z, Level},
+    levels::Level,
     logging::error::{ERR_LOADING_COLLISION_DATA, ERR_LOADING_TILE_DATA},
     procgen::{
         CHUNK_SIZE, ProcGenController, ProcGenRng, ProcGenTimer, ProcGenerated, TileData,
@@ -128,10 +128,9 @@ fn spawn_character<T>(
         let delay = animation_rng.random_range(ANIMATION_DELAY_RANGE);
 
         // Set target position in pixels
-        let target_pos = Vec3::new(
+        let target_pos = Vec2::new(
             chunk_pos.x as f32 * CHUNK_SIZE.x as f32 * tile_size.x + *x as f32 * tile_size.x,
             chunk_pos.y as f32 * CHUNK_SIZE.y as f32 * tile_size.y + *y as f32 * tile_size.y,
-            DEFAULT_Z,
         );
 
         // Spawn entity in chosen tile and store in controller

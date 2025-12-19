@@ -23,7 +23,7 @@ use crate::{
         player::Player,
     },
     impl_level_assets,
-    levels::{DEFAULT_Z, LEVEL_Z, Level, LevelAssets, LevelRng},
+    levels::{LEVEL_Z, Level, LevelAssets, LevelRng},
     logging::{error::ERR_LOADING_COLLISION_DATA, warn::WARN_INCOMPLETE_ASSET_DATA},
     procgen::{ProcGenController, ProcGenerated},
     screens::Screen,
@@ -60,7 +60,7 @@ impl ProcGenerated for OverworldProcGen {}
 const LEVEL_POS: Vec3 = Vec3::new(0., 0., LEVEL_Z);
 
 /// Player position
-const PLAYER_POS: Vec3 = Vec3::new(0., 0., DEFAULT_Z);
+const PLAYER_POS: Vec2 = Vec2::new(0., 0.);
 
 /// Spawn overworld with player, enemies and objects
 pub(crate) fn spawn_overworld(

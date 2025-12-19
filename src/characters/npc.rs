@@ -26,7 +26,7 @@ use crate::{
         character_collider, setup_shadow,
     },
     impl_character_assets,
-    levels::{DEFAULT_Z, DynamicZ},
+    levels::{DEFAULT_Z, YSort},
     procgen::ProcGenerated,
     screens::Screen,
 };
@@ -86,16 +86,16 @@ impl Character for Slime {
     fn container_bundle(
         &self,
         data: &(Option<String>, Option<f32>, Option<f32>),
-        pos: Vec3,
+        pos: Vec2,
     ) -> impl Bundle {
         (
             Name::new("Slime"),
             Npc,
             Self,
-            Transform::from_translation(pos),
+            Transform::from_translation(pos.extend(DEFAULT_Z)),
+            YSort(DEFAULT_Z),
             character_collider::<Self>(data),
             Visibility::Inherited,
-            DynamicZ(DEFAULT_Z),
             RigidBody::KinematicPositionBased,
             GravityScale(0.),
             KinematicCharacterController {

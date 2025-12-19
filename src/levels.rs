@@ -23,8 +23,8 @@ pub(super) fn plugin(app: &mut App) {
     // Add child plugins
     app.add_plugins(overworld::plugin);
 
-    // Sort entities with `DynamicZ` by Y
-    app.add_systems(PostUpdate, sort_by_y);
+    // Sort entities with `YSort` by Y
+    app.add_systems(PostUpdate, y_sort);
 }
 
 /// Z-level for the level
@@ -33,6 +33,11 @@ pub(crate) const LEVEL_Z: f32 = 1.;
 pub(crate) const SHADOW_Z: f32 = 9.;
 /// Z-level for any foreground object
 pub(crate) const DEFAULT_Z: f32 = 10.;
+
+/// Factor for [`y_sort`]
+///
+/// This is required to ensure that we stay within the default Z-levels supported by bevy's camera.
+pub(crate) const Y_SORT_FACTOR: f32 = 1e-5;
 
 /// Applies to anything that stores level assets
 pub(crate) trait LevelAssets
@@ -70,7 +75,7 @@ where
 /// this value could be tweaked to implement virtual Z for jumping
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
-pub(crate) struct DynamicZ(pub(crate) f32);
+pub(crate) struct YSort(pub(crate) f32);
 
 /// Rng for levels
 #[derive(Component)]
@@ -84,8 +89,8 @@ fn setup_rng(mut global: Single<&mut WyRand, With<GlobalRng>>, mut commands: Com
 /// Applies the y-sorting to the entities Z position.
 ///
 /// Heavily inspired by: <https://github.com/fishfolk/punchy>
-fn sort_by_y(mut query: Query<(&mut Transform, &DynamicZ)>) {
-    for (mut transform, z_order) in query.iter_mut() {
-        transform.translation.z = z_order.0 - (transform.translation.y * 0.00001);
+fn y_sort(mut query: Query<(&mut Transform, &YSort)>) {
+    for (mut transform, sort) in query.iter_mut() {
+        transform.translation.z = sort.0 - transform.translation.y * Y_SORT_FACTOR;
     }
 }

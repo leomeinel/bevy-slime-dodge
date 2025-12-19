@@ -27,7 +27,8 @@ use crate::{
         character_collider, setup_shadow, tick_jump_timer,
     },
     impl_character_assets,
-    levels::{DEFAULT_Z, DynamicZ},
+    levels::{DEFAULT_Z, Y_SORT_FACTOR, YSort},
+    logging::warn::WARN_INCOMPLETE_COLLISION_DATA_FALLBACK,
     screens::Screen,
     utils::maths::ease_out_quad,
 };
@@ -108,15 +109,22 @@ impl Character for Player {
     fn container_bundle(
         &self,
         data: &(Option<String>, Option<f32>, Option<f32>),
-        pos: Vec3,
+        pos: Vec2,
     ) -> impl Bundle {
+        let width = data.1.unwrap_or_else(|| {
+            warn_once!("{}", WARN_INCOMPLETE_COLLISION_DATA_FALLBACK);
+            24.
+        });
+        // Add shadow offset to Z-level of player
+        let z_level = DEFAULT_Z + Y_SORT_FACTOR * width / 4.;
+
         (
             Name::new("Player"),
             Self,
-            Transform::from_translation(pos),
+            Transform::from_translation(pos.extend(z_level)),
+            YSort(z_level),
             character_collider::<Self>(data),
             Visibility::Inherited,
-            DynamicZ(DEFAULT_Z),
             RigidBody::KinematicVelocityBased,
             GravityScale(0.),
             KinematicCharacterController {
@@ -289,12 +297,12 @@ fn apply_jump(
     }
 
     // Apply visual jump or fall
-    let multiplier = if state == AnimationState::Jump {
+    let factor = if state == AnimationState::Jump {
         1.0f32
     } else {
         -1.0f32
     };
-    let target = JUMP_HEIGHT * multiplier * ease_out_quad(timer.0.fraction());
+    let target = JUMP_HEIGHT * factor * ease_out_quad(timer.0.fraction());
 
     transform.translation.y += target - movement.jump_height;
     movement.jump_height = target;

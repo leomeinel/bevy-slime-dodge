@@ -30,7 +30,6 @@ use crate::{
     levels::{DEFAULT_Z, YSort, YSortOffset},
     logging::{error::ERR_LOADING_TILE_DATA, warn::WARN_INCOMPLETE_COLLISION_DATA_FALLBACK},
     screens::Screen,
-    utils::maths::ease_out_quad,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -304,7 +303,9 @@ fn apply_jump(
     } else {
         -1.0f32
     };
-    let target = JUMP_HEIGHT * factor * ease_out_quad(timer.0.fraction());
+    let eased_time = EasingCurve::new(0., 1., EaseFunction::QuadraticOut);
+    let eased_time = eased_time.sample_clamped(timer.0.fraction());
+    let target = JUMP_HEIGHT * factor * eased_time;
 
     transform.translation.y += target - movement.jump_height;
     movement.jump_height = target;

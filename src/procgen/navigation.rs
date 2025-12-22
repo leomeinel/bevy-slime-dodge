@@ -5,6 +5,8 @@
  * Copyright (c) 2025 Leopold Johannes Meinel & contributors
  * SPDX ID: Apache-2.0
  * URL: https://www.apache.org/licenses/LICENSE-2.0
+ * -----
+ * Heavily inspired by: https://github.com/vleue/vleue_navigator
  */
 
 use bevy::{color::palettes::tailwind, prelude::*};

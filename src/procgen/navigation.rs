@@ -23,7 +23,7 @@ pub(super) fn plugin(app: &mut App) {
     ));
 }
 
-/// Update interval for [`NavMeshUpdateMode::Debounced()`] that is applied to [`chunk_mesh`]
+/// Update interval for [`NavMeshUpdateMode::Debounced`] that is applied to [`chunk_mesh`]
 const DEBOUNCED_UPDATE_INTERVAL: f32 = 0.5;
 
 /// Mesh for a single chunk

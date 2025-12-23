@@ -42,6 +42,9 @@ pub(crate) fn chunk_mesh(world_pos: Vec2, scale_factor: f32) -> impl Bundle {
             ..default()
         },
         NavMeshUpdateMode::Debounced(DEBOUNCED_UPDATE_INTERVAL),
+        // NOTE: We are subtracting '`scale_factor` / 2.' because the grid is misaligned otherwise.
+        //       This has so far only been observed for the debug grid, so we cannot say if that is actually the case.
+        //       I am also currently not sure if something else might be at fault here that should be fixed.
         Transform::from_xyz(
             world_pos.x - scale_factor / 2.,
             world_pos.y - scale_factor / 2.,

@@ -12,9 +12,11 @@
 //! Development tools for the game. This plugin is only enabled in dev builds.
 
 use bevy::{
-    dev_tools::states::log_transitions, input::common_conditions::input_just_pressed, prelude::*,
+    color::palettes::tailwind, dev_tools::states::log_transitions,
+    input::common_conditions::input_just_pressed, prelude::*,
 };
 use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
+use vleue_navigator::prelude::*;
 
 use crate::screens::Screen;
 
@@ -28,24 +30,54 @@ pub(super) fn plugin(app: &mut App) {
     // Log `Screen` state transitions.
     app.add_systems(Update, log_transitions::<Screen>);
 
-    // Toggle the debug overlay for UI.
+    // Toggle debug overlays
     app.add_systems(
         Update,
-        toggle_debug_ui.run_if(input_just_pressed(TOGGLE_KEY)),
+        (
+            toggle_debug_ui,
+            toggle_debug_colliders,
+            toggle_debug_navmeshes,
+        )
+            .run_if(input_just_pressed(TOGGLE_KEY)),
     );
 }
 
 /// Toggle key
 const TOGGLE_KEY: KeyCode = KeyCode::Backquote;
 
-/// Toggle debug interface
-fn toggle_debug_ui(
-    mut options: ResMut<UiDebugOptions>,
-    mut render_context: ResMut<DebugRenderContext>,
-) {
-    // Toggle rapier debug context
-    render_context.enabled = !render_context.enabled;
-
+/// Toggle debug overlay for UI
+fn toggle_debug_ui(mut options: ResMut<UiDebugOptions>) {
     // Toggle ui debug options
     options.toggle();
+}
+
+/// Toggle debug overlay for rapier colliders
+fn toggle_debug_colliders(mut render_context: ResMut<DebugRenderContext>) {
+    // Toggle rapier debug context
+    render_context.enabled = !render_context.enabled;
+}
+
+/// rgb(219, 39, 119)
+const NAVMESH_DEBUG_COLOR: Srgba = tailwind::PINK_600;
+
+/// Toggle debug overlay for navmeshes
+fn toggle_debug_navmeshes(
+    debug_navmeshes: Query<Entity, With<NavMeshDebug>>,
+    live_navmeshes: Query<Entity, With<ManagedNavMesh>>,
+    mut commands: Commands,
+) {
+    // Despawn debug meshes and return if any exist
+    if !debug_navmeshes.is_empty() {
+        for entity in &debug_navmeshes {
+            commands.entity(entity).remove::<NavMeshDebug>();
+        }
+        return;
+    }
+
+    // Spawn debug navmeshes
+    for entity in &live_navmeshes {
+        commands
+            .entity(entity)
+            .insert(NavMeshDebug(NAVMESH_DEBUG_COLOR.into()));
+    }
 }

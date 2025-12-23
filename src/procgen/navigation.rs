@@ -9,7 +9,7 @@
  * Heavily inspired by: https://github.com/vleue/vleue_navigator
  */
 
-use bevy::{color::palettes::tailwind, prelude::*};
+use bevy::prelude::*;
 use polyanya::Triangulation;
 use vleue_navigator::prelude::*;
 
@@ -46,7 +46,5 @@ pub(crate) fn chunk_mesh(world_pos: Vec2, scale_factor: f32) -> impl Bundle {
             0.,
         )
         .with_scale(Vec3::splat(scale_factor)),
-        // FIXME: This should be handled by `dev_tools` module and should only be shown when toggled
-        NavMeshDebug(tailwind::YELLOW_600.into()),
     )
 }

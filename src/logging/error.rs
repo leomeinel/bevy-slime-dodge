@@ -17,9 +17,18 @@ pub(crate) const ERR_LOADING_ANIMATION_DATA: &str =
 pub(crate) const ERR_LOADING_TILE_DATA: &str =
     "Could not load tile data. The file is probably missing.";
 
+/// Error message if sprite image is not loaded
 pub(crate) const ERR_SPRITE_IMAGE_NOT_LOADED: &str =
     "The given image for the sprite sheet has not been loaded successfully. This is a bug.";
+/// Error message if loaded animation data is invalid or incomplete
+///
+/// Since only the idle animation is required, the error message includes that.
 pub(crate) const ERR_INVALID_REQUIRED_ANIMATION_DATA: &str =
     "The loaded animation data for required idle animation is invalid or incomplete.";
+/// Error message if loaded animation has not been initialized
 pub(crate) const ERR_UNINITIALIZED_REQUIRED_ANIMATION: &str =
-    "The loaded animation data for required idle animation is invalid or incomplete.";
+    "The requested animation has not been initialized.";
+
+/// Error message if an error has been encountered while calculating minimum chunk pos
+pub(crate) const ERR_INVALID_MINIMUM_CHUNK_POS: &str =
+    "Could not determine correct minimum chunk position. This is a bug.";

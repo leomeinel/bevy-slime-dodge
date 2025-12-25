@@ -346,6 +346,7 @@ dependencies = [
  "bevy_ecs_tilemap",
  "bevy_enhanced_input",
  "bevy_light_2d",
+ "bevy_northstar",
  "bevy_prng",
  "bevy_rand",
  "bevy_rapier2d",
@@ -355,7 +356,6 @@ dependencies = [
  "rand",
  "serde",
  "tracing",
- "vleue_navigator",
 ]
 
 [[package]]
@@ -1130,6 +1130,21 @@ name = "bevy_mikktspace"
 version = "0.17.0-dev"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ef8e4b7e61dfe7719bb03c884dc270cd46a82efb40f93e9933b990c5c190c59"
+
+[[package]]
+name = "bevy_northstar"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02df6e46592e285cba9efd0b27ce2b043242b2bb766a6b9a6801c63800ce1558"
+dependencies = [
+ "bevy",
+ "indexmap",
+ "ndarray",
+ "rayon",
+ "rustc-hash 2.1.1",
+ "slab",
+ "smallvec",
+]
 
 [[package]]
 name = "bevy_pbr"
@@ -3621,6 +3636,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ndarray"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c7c9125e8f6f10c9da3aad044cc918cf8784fa34de857b1aa68038eb05a50a9"
+dependencies = [
+ "matrixmultiply",
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "portable-atomic",
+ "portable-atomic-util",
+ "rawpointer",
+ "rayon",
+]
+
+[[package]]
 name = "ndk"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4916,15 +4947,15 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.146"
+version = "1.0.147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "217ca874ae0207aac254aa02c957ded05585a90892cc8d87f9e5fa49669dadd8"
+checksum = "6af14725505314343e673e9ecb7cd7e8a36aa9791eb936235a3567cc31447ae4"
 dependencies = [
  "itoa",
  "memchr",
- "ryu",
  "serde",
  "serde_core",
+ "zmij",
 ]
 
 [[package]]
@@ -5500,18 +5531,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "vleue_navigator"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa94a11d3f8f5dfe570934de134933fa4b585b1b45f997f8e1ac691c883b21bc"
-dependencies = [
- "bevy",
- "itertools 0.14.0",
- "log",
- "polyanya",
-]
 
 [[package]]
 name = "walkdir"
@@ -6607,3 +6626,9 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "zmij"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1dccf46b25b205e4bebe1d5258a991df1cc17801017a845cb5b3fe0269781aa"

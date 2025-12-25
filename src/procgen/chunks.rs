@@ -16,7 +16,7 @@ use crate::{
     logging::{error::ERR_LOADING_TILE_DATA, warn::WARN_INCOMPLETE_TILE_DATA},
     procgen::{
         CHUNK_SIZE, PROCGEN_DISTANCE, ProcGenController, ProcGenTimer, ProcGenerated, TileData,
-        TileHandle, navigation::chunk_mesh,
+        TileHandle,
     },
 };
 
@@ -160,7 +160,6 @@ fn spawn_chunk<T, A>(
         ..default()
     });
 
-    // Add chunk container and nav mesh to level so that level handles despawning
-    let nav_mesh = commands.spawn(chunk_mesh(world_pos, tile_size.x)).id();
-    commands.entity(level).add_children(&[container, nav_mesh]);
+    // Add chunk container to level so that level handles despawning
+    commands.entity(level).add_child(container);
 }

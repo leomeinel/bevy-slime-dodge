@@ -12,13 +12,21 @@
 //! Development tools for the game. This plugin is only enabled in dev builds.
 
 use bevy::{
-    color::palettes::tailwind, dev_tools::states::log_transitions,
-    input::common_conditions::input_just_pressed, prelude::*,
+    dev_tools::states::log_transitions, input::common_conditions::input_just_pressed, prelude::*,
+};
+use bevy_northstar::{
+    debug::NorthstarDebugPlugin,
+    grid::Grid,
+    prelude::{DebugGrid, DebugGridBuilder, DebugOffset, OrdinalNeighborhood},
 };
 use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
-use vleue_navigator::prelude::*;
 
-use crate::screens::Screen;
+use crate::{
+    levels::overworld::OverworldProcGen,
+    logging::error::ERR_LOADING_TILE_DATA,
+    procgen::{ProcGenerated, TileData, TileHandle},
+    screens::Screen,
+};
 
 pub(super) fn plugin(app: &mut App) {
     // Add rapier debug render
@@ -26,6 +34,9 @@ pub(super) fn plugin(app: &mut App) {
         enabled: false,
         ..default()
     });
+
+    // Add north star debug plugin
+    app.add_plugins(NorthstarDebugPlugin::<OrdinalNeighborhood>::default());
 
     // Log `Screen` state transitions.
     app.add_systems(Update, log_transitions::<Screen>);
@@ -36,7 +47,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             toggle_debug_ui,
             toggle_debug_colliders,
-            toggle_debug_navmeshes,
+            toggle_debug_nav_grid::<OverworldProcGen>,
         )
             .run_if(input_just_pressed(TOGGLE_KEY)),
     );
@@ -57,27 +68,37 @@ fn toggle_debug_colliders(mut render_context: ResMut<DebugRenderContext>) {
     render_context.enabled = !render_context.enabled;
 }
 
-/// rgb(219, 39, 119)
-const NAVMESH_DEBUG_COLOR: Srgba = tailwind::PINK_600;
-
-/// Toggle debug overlay for navmeshes
-fn toggle_debug_navmeshes(
-    debug_navmeshes: Query<Entity, With<NavMeshDebug>>,
-    live_navmeshes: Query<Entity, With<ManagedNavMesh>>,
+/// Toggle debug overlay for nav grids
+fn toggle_debug_nav_grid<T>(
+    debug_nav_grid: Option<Single<Entity, (With<DebugGrid>, Without<Grid<OrdinalNeighborhood>>)>>,
+    nav_grid: Single<(Entity, &Transform), (With<Grid<OrdinalNeighborhood>>, Without<DebugGrid>)>,
     mut commands: Commands,
-) {
-    // Despawn debug meshes and return if any exist
-    if !debug_navmeshes.is_empty() {
-        for entity in &debug_navmeshes {
-            commands.entity(entity).remove::<NavMeshDebug>();
-        }
+    data: Res<Assets<TileData<T>>>,
+    handle: Res<TileHandle<T>>,
+) where
+    T: ProcGenerated,
+{
+    // Despawn debug grid and return if any exist
+    if let Some(debug_nav_grid) = debug_nav_grid {
+        commands.entity(debug_nav_grid.entity()).despawn();
         return;
     }
 
-    // Spawn debug navmeshes
-    for entity in &live_navmeshes {
-        commands
-            .entity(entity)
-            .insert(NavMeshDebug(NAVMESH_DEBUG_COLOR.into()));
-    }
+    // Get data from `TileData` with `TileHandle`
+    let data = data.get(handle.0.id()).expect(ERR_LOADING_TILE_DATA);
+    let tile_size = Vec2::new(data.tile_height, data.tile_width);
+
+    // Spawn debug grid
+    let (entity, transform) = nav_grid.into_inner();
+    let debug = commands
+        .spawn((
+            DebugGridBuilder::new(tile_size.x as u32, tile_size.y as u32)
+                .enable_chunks()
+                .enable_entrances()
+                .enable_cells()
+                .build(),
+            DebugOffset(transform.translation.xy().extend(0.)),
+        ))
+        .id();
+    commands.entity(entity).add_child(debug);
 }

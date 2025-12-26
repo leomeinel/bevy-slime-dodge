@@ -27,6 +27,12 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(NorthstarPlugin::<OrdinalNeighborhood>::default());
 }
 
+/// Size of the [`Grid<OrdinalNeighborhood>`]
+const GRID_SIZE: UVec2 = UVec2::new(
+    CHUNK_SIZE.x * (PROCGEN_DISTANCE as u32 * 2 + 1),
+    CHUNK_SIZE.y * (PROCGEN_DISTANCE as u32 * 2 + 1),
+);
+
 /// Replace [`Grid<OrdinalNeighborhood>`] with new grid at correct world position
 ///
 /// ## Traits
@@ -49,12 +55,6 @@ pub(crate) fn spawn_nav_grid<T>(
 
     commands.entity(level.entity()).add_child(entity);
 }
-
-/// Size of the [`Grid<OrdinalNeighborhood>`]
-const GRID_SIZE: UVec2 = UVec2::new(
-    CHUNK_SIZE.x * (PROCGEN_DISTANCE as u32 * 2 + 1),
-    CHUNK_SIZE.y * (PROCGEN_DISTANCE as u32 * 2 + 1),
-);
 
 // FIXME: This is quite heavy. Try to reduce load or spread load.
 /// Rebuild the nav grid

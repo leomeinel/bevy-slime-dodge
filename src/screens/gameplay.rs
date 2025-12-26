@@ -92,11 +92,13 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         OnExit(Screen::Gameplay),
         (
-            close_menu,
-            unpause,
             clear_procgen_controller::<OverworldProcGen>,
             clear_procgen_controller::<Slime>,
-        ),
+            reset_procgen_state,
+            close_menu,
+            unpause,
+        )
+            .chain(),
     );
 
     // Unpause if in no menu and in gameplay screen
@@ -114,6 +116,11 @@ fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
 /// Pause the game
 fn pause(mut next_pause: ResMut<NextState<Pause>>) {
     next_pause.set(Pause(true));
+}
+
+/// Reset [`ProcGenState`]
+fn reset_procgen_state(mut procgen_state: ResMut<NextState<ProcGenState>>) {
+    procgen_state.set(ProcGenState::default());
 }
 
 /// rgba(0, 0, 0, 204)

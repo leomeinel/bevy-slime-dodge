@@ -94,14 +94,14 @@ pub(crate) fn rebuild_nav_grid(
         return;
     }
 
-    // Reset local variables
-    *grid_pos = UVec2::ZERO;
-    *rebuild = false;
-
     // Rebuild grid if rebuild is true
     if *rebuild {
         grid.build();
     }
+
+    // Reset local variables
+    *grid_pos = UVec2::ZERO;
+    *rebuild = false;
 
     procgen_state.set(ProcGenState::Despawn);
 }
@@ -113,6 +113,7 @@ pub(crate) fn rebuild_nav_grid(
 /// - `T` must implement '[`Character`]'.
 /// - `A` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
 pub(crate) fn update_nav_grid_agent_pos<T, A>(
+    grid: Single<Entity, With<Grid<OrdinalNeighborhood>>>,
     characters: Query<(Entity, &Transform), With<T>>,
     mut commands: Commands,
     controller: Res<ProcGenController<A>>,
@@ -142,6 +143,8 @@ pub(crate) fn update_nav_grid_agent_pos<T, A>(
             (transform.translation.y / tile_size.y - min_chunk_pos.y as f32 * CHUNK_SIZE.x as f32)
                 .floor() as u32,
         );
-        commands.entity(entity).insert(AgentPos(pos.extend(0)));
+        commands
+            .entity(entity)
+            .insert((AgentPos(pos.extend(0)), AgentOfGrid(grid.entity())));
     }
 }

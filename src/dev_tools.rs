@@ -14,14 +14,14 @@
 use bevy::{
     dev_tools::states::log_transitions, input::common_conditions::input_just_pressed, prelude::*,
 };
-use bevy_northstar::{
-    debug::NorthstarDebugPlugin,
-    grid::Grid,
-    prelude::{DebugGrid, DebugGridBuilder, DebugOffset, OrdinalNeighborhood},
-};
+use bevy_northstar::prelude::*;
+use bevy_prng::WyRand;
+use bevy_rand::{global::GlobalRng, traits::ForkableSeed as _};
 use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
+use rand::Rng;
 
 use crate::{
+    characters::{Character, npc::Slime},
     levels::overworld::OverworldProcGen,
     logging::error::{ERR_INVALID_MINIMUM_CHUNK_POS, ERR_LOADING_TILE_DATA},
     procgen::{CHUNK_SIZE, ProcGenController, ProcGenState, ProcGenerated, TileData, TileHandle},
@@ -37,6 +37,9 @@ pub(super) fn plugin(app: &mut App) {
 
     // Add north star debug plugin
     app.add_plugins(NorthstarDebugPlugin::<OrdinalNeighborhood>::default());
+
+    // Setup debug rng
+    app.add_systems(Startup, setup_rng);
 
     // Log `Screen` state transitions.
     app.add_systems(Update, log_transitions::<Screen>);
@@ -54,6 +57,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             toggle_debug_ui,
             toggle_debug_colliders.run_if(in_state(Screen::Gameplay)),
+            toggle_debug_path::<Slime>,
         )
             .run_if(state_changed::<Debugging>),
     );
@@ -74,6 +78,10 @@ const TOGGLE_KEY: KeyCode = KeyCode::Backquote;
 /// Whether or not debugging is active
 #[derive(States, Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 struct Debugging(bool);
+
+/// Rng for debugging
+#[derive(Component)]
+struct DebugRng;
 
 /// Toggle debugging
 fn toggle_debugging(
@@ -148,11 +156,41 @@ fn spawn_debug_nav_grid<T>(
             DebugGridBuilder::new(tile_size.x as u32, tile_size.y as u32)
                 .enable_chunks()
                 .enable_entrances()
-                .enable_cells()
-                .enable_cached_paths()
                 .build(),
             DebugOffset(world_pos.extend(0.)),
         ))
         .id();
     commands.entity(nav_grid.entity()).add_child(debug);
+}
+
+/// Toggle debug path for [`Character`]
+///
+/// ## Traits
+///
+/// - `T` must implement '[`Character`]'.
+fn toggle_debug_path<T>(
+    mut debug_rng: Single<&mut WyRand, With<DebugRng>>,
+    characters: Query<Entity, (With<T>, With<AgentPos>)>,
+    mut commands: Commands,
+) where
+    T: Character,
+{
+    for entity in characters {
+        let color = Color::linear_rgb(
+            debug_rng.random_range(0.0..=1.),
+            debug_rng.random_range(0.0..=1.),
+            debug_rng.random_range(0.0..=1.),
+        );
+        // Insert debug path with random color
+        commands.entity(entity).insert((
+            DebugPath::new(color),
+            // FIXME: Remove arbitrary path
+            Pathfind::new_2d(40, 40),
+        ));
+    }
+}
+
+/// Spawn [`DebugRng`] by forking [`GlobalRng`]
+fn setup_rng(mut global: Single<&mut WyRand, With<GlobalRng>>, mut commands: Commands) {
+    commands.spawn((DebugRng, global.fork_seed()));
 }

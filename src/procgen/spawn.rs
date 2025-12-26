@@ -19,8 +19,8 @@ use crate::{
     levels::Level,
     logging::error::{ERR_LOADING_COLLISION_DATA, ERR_LOADING_TILE_DATA},
     procgen::{
-        CHUNK_SIZE, ProcGenController, ProcGenRng, ProcGenTimer, ProcGenerated, TileData,
-        TileHandle,
+        CHUNK_SIZE, ProcGenController, ProcGenRng, ProcGenSpawned, ProcGenTimer, ProcGenerated,
+        TileData, TileHandle,
     },
 };
 
@@ -140,7 +140,9 @@ fn spawn_character<T>(
             commands, visual_map, data, target_pos, animations, shadow, delay,
         );
         controller.positions.insert(entity, *chunk_pos);
+
         // Add entity to level so that level handles despawning
         commands.entity(level).add_child(entity);
+        commands.trigger(ProcGenSpawned::<T>::default());
     }
 }

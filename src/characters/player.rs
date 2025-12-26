@@ -17,6 +17,7 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_enhanced_input::prelude::*;
+use bevy_northstar::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
@@ -121,7 +122,7 @@ impl Character for Player {
             Transform::from_translation(pos.extend(DEFAULT_Z)),
             YSort(DEFAULT_Z),
             YSortOffset(width / 4.),
-            character_collider::<Self>(data),
+            character_collider(data),
             Visibility::Inherited,
             RigidBody::KinematicVelocityBased,
             GravityScale(0.),
@@ -131,6 +132,7 @@ impl Character for Player {
             },
             LockedAxes::ROTATION_LOCKED,
             Movement::default(),
+            Blocking,
             actions!(
                 Self[
                     (

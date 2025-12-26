@@ -16,6 +16,7 @@
 
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
+use bevy_northstar::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
@@ -94,7 +95,7 @@ impl Character for Slime {
             Self,
             Transform::from_translation(pos.extend(DEFAULT_Z)),
             YSort(DEFAULT_Z),
-            character_collider::<Self>(data),
+            character_collider(data),
             Visibility::Inherited,
             RigidBody::KinematicPositionBased,
             GravityScale(0.),
@@ -105,6 +106,7 @@ impl Character for Slime {
             LockedAxes::ROTATION_LOCKED,
             Movement::default(),
             JumpTimer::default(),
+            Blocking,
         )
     }
 }

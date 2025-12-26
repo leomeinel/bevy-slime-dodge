@@ -19,8 +19,10 @@ use crate::{
     levels::overworld::{Overworld, OverworldAssets, OverworldProcGen, spawn_overworld},
     menus::Menu,
     procgen::{
-        chunks::spawn_chunks, clear_procgen_controller, despawn_procgen,
-        navigation::spawn_nav_grid, spawn::spawn_characters,
+        chunks::spawn_chunks,
+        clear_procgen_controller, despawn_procgen,
+        navigation::{rebuild_nav_grid, spawn_nav_grid, update_nav_grid_agent_pos},
+        spawn::spawn_characters,
     },
     screens::Screen,
 };
@@ -36,15 +38,33 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         ((
-            despawn_procgen::<OverworldProcGen, OverworldProcGen>,
-            despawn_procgen::<Slime, OverworldProcGen>,
-            spawn_chunks::<OverworldProcGen, OverworldAssets, Overworld>,
-            spawn_characters::<Slime, OverworldProcGen, Overworld>,
-            spawn_nav_grid::<OverworldProcGen, Overworld>,
+            (
+                despawn_procgen::<OverworldProcGen, OverworldProcGen>,
+                despawn_procgen::<Slime, OverworldProcGen>,
+            )
+                .chain(),
+            (
+                spawn_chunks::<OverworldProcGen, OverworldAssets, Overworld>,
+                spawn_characters::<Slime, OverworldProcGen, Overworld>,
+            )
+                .chain(),
         )
             .chain())
         .run_if(in_state(Screen::Gameplay)),
     );
+
+    app.add_systems(
+        PostUpdate,
+        (
+            update_nav_grid_agent_pos::<Player, OverworldProcGen>,
+            update_nav_grid_agent_pos::<Slime, OverworldProcGen>,
+        )
+            .chain()
+            .run_if(in_state(Screen::Gameplay)),
+    );
+
+    app.add_observer(spawn_nav_grid::<OverworldProcGen, Overworld>);
+    app.add_observer(rebuild_nav_grid);
 
     // Open pause on pressing P or Escape and pause game
     app.add_systems(

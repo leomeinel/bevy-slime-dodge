@@ -23,8 +23,8 @@ use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 
 use crate::{
     levels::overworld::OverworldProcGen,
-    logging::error::ERR_LOADING_TILE_DATA,
-    procgen::{ProcGenerated, TileData, TileHandle},
+    logging::error::{ERR_INVALID_MINIMUM_CHUNK_POS, ERR_LOADING_TILE_DATA},
+    procgen::{CHUNK_SIZE, ProcGenController, ProcGenerated, TileData, TileHandle},
     screens::Screen,
 };
 
@@ -102,25 +102,39 @@ fn despawn_debug_nav_grid(
 ///
 /// - `T` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
 fn spawn_debug_nav_grid<T>(
-    debug_nav_grid: Option<Single<Entity, (With<DebugGrid>, Without<Grid<OrdinalNeighborhood>>)>>,
-    nav_grid: Single<(Entity, &Transform), (With<Grid<OrdinalNeighborhood>>, Without<DebugGrid>)>,
+    debug_nav_grid: Option<
+        Single<&mut DebugOffset, (With<DebugGrid>, Without<Grid<OrdinalNeighborhood>>)>,
+    >,
+    nav_grid: Single<Entity, (With<Grid<OrdinalNeighborhood>>, Without<DebugGrid>)>,
     mut commands: Commands,
+    controller: Res<ProcGenController<T>>,
     data: Res<Assets<TileData<T>>>,
     handle: Res<TileHandle<T>>,
 ) where
     T: ProcGenerated,
 {
-    // Return if debug grid is present
-    if debug_nav_grid.is_some() {
-        return;
-    }
-
     // Get data from `TileData` with `TileHandle`
     let data = data.get(handle.0.id()).expect(ERR_LOADING_TILE_DATA);
     let tile_size = Vec2::new(data.tile_height, data.tile_width);
 
+    // Determine world pos from minimum chunk pos
+    let min_chunk_pos = controller
+        .positions
+        .values()
+        .min_by_key(|pos| (pos.x, pos.y))
+        .expect(ERR_INVALID_MINIMUM_CHUNK_POS);
+    let world_pos = Vec2::new(
+        min_chunk_pos.x as f32 * CHUNK_SIZE.x as f32 * tile_size.x,
+        min_chunk_pos.y as f32 * CHUNK_SIZE.y as f32 * tile_size.y,
+    );
+
+    // Return if debug grid is present and update offset
+    if let Some(mut offset) = debug_nav_grid {
+        offset.0 = world_pos.extend(0.);
+        return;
+    }
+
     // Spawn debug grid
-    let (entity, transform) = nav_grid.into_inner();
     let debug = commands
         .spawn((
             DebugGridBuilder::new(tile_size.x as u32, tile_size.y as u32)
@@ -129,8 +143,8 @@ fn spawn_debug_nav_grid<T>(
                 .enable_cells()
                 .enable_cached_paths()
                 .build(),
-            DebugOffset(transform.translation.xy().extend(0.)),
+            DebugOffset(world_pos.extend(0.)),
         ))
         .id();
-    commands.entity(entity).add_child(debug);
+    commands.entity(nav_grid.entity()).add_child(debug);
 }

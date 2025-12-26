@@ -31,7 +31,11 @@ pub(super) fn plugin(app: &mut App) {
     // Spawn overworld
     app.add_systems(
         OnEnter(Screen::Gameplay),
-        spawn_overworld.after(setup_shadow::<Player>),
+        (
+            spawn_overworld.after(setup_shadow::<Player>),
+            spawn_nav_grid::<Overworld>,
+        )
+            .chain(),
     );
 
     // Start spawning/despawning chunks and characters
@@ -63,7 +67,6 @@ pub(super) fn plugin(app: &mut App) {
             .run_if(in_state(Screen::Gameplay)),
     );
 
-    app.add_observer(spawn_nav_grid::<OverworldProcGen, Overworld>);
     app.add_observer(rebuild_nav_grid);
 
     // Open pause on pressing P or Escape and pause game

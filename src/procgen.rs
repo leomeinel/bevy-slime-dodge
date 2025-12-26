@@ -44,19 +44,6 @@ pub(crate) const CHUNK_SIZE: UVec2 = UVec2 { x: 16, y: 16 };
 /// Maximum distance for procedural generation
 pub(crate) const PROCGEN_DISTANCE: i32 = 2;
 
-/// Event that fires when a procedurally generated object is despawned
-///
-/// ## Traits
-///
-/// - `T` must implement [`ProcGenerated`] and is used as any procedurally generated item.
-#[derive(Event, Default)]
-pub(crate) struct ProcGenDespawned<T>
-where
-    T: ProcGenerated,
-{
-    _phantom: PhantomData<T>,
-}
-
 /// Event that fires when a procedurally generated object is spawned
 ///
 /// ## Traits
@@ -215,7 +202,6 @@ pub(crate) fn despawn_procgen<T, A>(
         if camera_chunk_pos.chebyshev_distance(chunk_pos) > PROCGEN_DISTANCE as u32 {
             controller.positions.remove(&entity);
             commands.entity(entity).despawn();
-            commands.trigger(ProcGenDespawned::<T>::default());
         }
     }
 }

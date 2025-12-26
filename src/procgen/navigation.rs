@@ -14,7 +14,7 @@ use bevy_northstar::prelude::*;
 
 use crate::{
     characters::Character,
-    levels::Level,
+    levels::{Level, overworld::OverworldProcGen},
     logging::error::{ERR_INVALID_MINIMUM_CHUNK_POS, ERR_LOADING_TILE_DATA},
     procgen::{
         CHUNK_SIZE, PROCGEN_DISTANCE, ProcGenController, ProcGenSpawned, ProcGenTimer,
@@ -27,52 +27,27 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(NorthstarPlugin::<OrdinalNeighborhood>::default());
 }
 
-/// Marker component for a navigation grid
-#[derive(Component, Default, Reflect)]
-pub(crate) struct NavGrid;
-impl ProcGenerated for NavGrid {}
-
 /// Replace [`Grid<OrdinalNeighborhood>`] with new grid at correct world position
 ///
 /// ## Traits
 ///
-/// - `T` must implement '[`Character`]'.
-/// - `A` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
-pub(crate) fn spawn_nav_grid<T, A>(
-    _: On<ProcGenSpawned<T>>,
-    grid: Option<Single<Entity, (With<Grid<OrdinalNeighborhood>>, Without<A>)>>,
-    level: Single<Entity, (With<A>, Without<Grid<OrdinalNeighborhood>>)>,
+/// - `T` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
+pub(crate) fn spawn_nav_grid<T>(
+    level: Single<Entity, (With<T>, Without<Grid<OrdinalNeighborhood>>)>,
     mut commands: Commands,
-    controller: Res<ProcGenController<T>>,
-    data: Res<Assets<TileData<T>>>,
-    handle: Res<TileHandle<T>>,
 ) where
-    T: ProcGenerated,
-    A: Level,
+    T: Level,
 {
-    // Despawn outdated grid if one exists
-    if let Some(grid) = grid {
-        commands.entity(grid.entity()).despawn();
-    }
+    let grid_settings = GridSettingsBuilder::new_2d(GRID_SIZE.x, GRID_SIZE.y)
+        .chunk_size(CHUNK_SIZE.x)
+        .default_impassable()
+        .enable_collision()
+        .build();
+    let entity = commands
+        .spawn(Grid::<OrdinalNeighborhood>::new(&grid_settings))
+        .id();
 
-    // Get data from `TileData` with `TileHandle`
-    let data = data.get(handle.0.id()).expect(ERR_LOADING_TILE_DATA);
-    let tile_size = Vec2::new(data.tile_height, data.tile_width);
-
-    // Determine spawn position and spawn nav grid
-    let min_chunk_pos = controller
-        .positions
-        .values()
-        .min_by_key(|pos| (pos.x, pos.y))
-        .expect(ERR_INVALID_MINIMUM_CHUNK_POS);
-    let world_pos = Vec2::new(
-        min_chunk_pos.x as f32 * CHUNK_SIZE.x as f32 * tile_size.x,
-        min_chunk_pos.y as f32 * CHUNK_SIZE.y as f32 * tile_size.y,
-    );
-    // Add entity to level so that level handles despawning
-    let entity = commands.spawn(nav_grid(world_pos)).id();
     commands.entity(level.entity()).add_child(entity);
-    commands.trigger(ProcGenSpawned::<NavGrid>::default());
 }
 
 /// Size of the [`Grid<OrdinalNeighborhood>`]
@@ -81,11 +56,12 @@ const GRID_SIZE: UVec2 = UVec2::new(
     CHUNK_SIZE.y * (PROCGEN_DISTANCE as u32 * 2 + 1),
 );
 
+// FIXME: This is quite heavy. Try to reduce load or spread load.
 /// Rebuild the nav grid
 ///
 /// Currently this sets every cell to [Nav::Passable], but this can in the future also include obstacle detection.
 pub(crate) fn rebuild_nav_grid(
-    _: On<ProcGenSpawned<NavGrid>>,
+    _: On<ProcGenSpawned<OverworldProcGen>>,
     mut grid: Single<&mut Grid<OrdinalNeighborhood>>,
 ) {
     // Set every cell to passable
@@ -107,7 +83,7 @@ pub(crate) fn rebuild_nav_grid(
 /// - `T` must implement '[`Character`]'.
 /// - `A` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
 pub(crate) fn update_nav_grid_agent_pos<T, A>(
-    characters: Query<(Entity, &Transform), With<T>>,
+    characters: Query<(Entity, &Transform, Ref<Transform>), With<T>>,
     mut commands: Commands,
     controller: Res<ProcGenController<A>>,
     data: Res<Assets<TileData<A>>>,
@@ -137,31 +113,19 @@ pub(crate) fn update_nav_grid_agent_pos<T, A>(
         .min_by_key(|pos| (pos.x, pos.y))
         .expect(ERR_INVALID_MINIMUM_CHUNK_POS);
 
-    for (entity, transform) in characters {
-        let agent_pos = UVec2::new(
+    for (entity, transform, ref_transform) in characters {
+        // Continue if transform is not changed
+        if !ref_transform.is_changed() {
+            continue;
+        }
+
+        // Insert agent pos
+        let pos = UVec2::new(
             (transform.translation.x / tile_size.x - min_chunk_pos.x as f32 * CHUNK_SIZE.x as f32)
                 .floor() as u32,
             (transform.translation.y / tile_size.y - min_chunk_pos.y as f32 * CHUNK_SIZE.x as f32)
                 .floor() as u32,
         );
-        commands
-            .entity(entity)
-            .insert(AgentPos(agent_pos.extend(0)));
+        commands.entity(entity).insert(AgentPos(pos.extend(0)));
     }
-}
-
-/// Bundle containing the [`Grid<OrdinalNeighborhood>`] for the map
-fn nav_grid(world_pos: Vec2) -> impl Bundle {
-    let grid_settings = GridSettingsBuilder::new_2d(GRID_SIZE.x, GRID_SIZE.y)
-        .chunk_size(CHUNK_SIZE.x)
-        .default_impassable()
-        .enable_collision()
-        .build();
-    let grid = Grid::<OrdinalNeighborhood>::new(&grid_settings);
-
-    (
-        grid,
-        Transform::from_translation(world_pos.extend(0.)),
-        NavGrid,
-    )
 }

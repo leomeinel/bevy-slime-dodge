@@ -51,12 +51,20 @@ pub(super) fn plugin(app: &mut App) {
     // Toggle debug overlays
     app.add_systems(
         Update,
-        (toggle_debug_ui, toggle_debug_colliders).run_if(state_changed::<Debugging>),
+        (
+            toggle_debug_ui,
+            toggle_debug_colliders.run_if(in_state(Screen::Gameplay)),
+        )
+            .run_if(state_changed::<Debugging>),
     );
-    app.add_systems(OnEnter(Debugging(false)), despawn_debug_nav_grid);
     app.add_systems(
-        OnExit(ProcGenState::RebuildNavGrid),
-        spawn_debug_nav_grid::<OverworldProcGen>.run_if(in_state(Debugging(true))),
+        OnEnter(Debugging(false)),
+        despawn_debug_nav_grid.run_if(in_state(Screen::Gameplay)),
+    );
+    app.add_systems(
+        OnEnter(ProcGenState::RebuildNavGrid),
+        spawn_debug_nav_grid::<OverworldProcGen>
+            .run_if(in_state(Debugging(true)).and(in_state(Screen::Gameplay))),
     );
 }
 

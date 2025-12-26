@@ -41,35 +41,67 @@ pub(super) fn plugin(app: &mut App) {
     // Log `Screen` state transitions.
     app.add_systems(Update, log_transitions::<Screen>);
 
-    // Toggle debug overlays
+    // Set debugging state
+    app.init_state::<Debugging>();
     app.add_systems(
         Update,
-        (
-            toggle_debug_ui,
-            toggle_debug_colliders,
-            toggle_debug_nav_grid::<OverworldProcGen>,
-        )
-            .run_if(input_just_pressed(TOGGLE_KEY)),
+        toggle_debugging.run_if(input_just_pressed(TOGGLE_KEY)),
+    );
+
+    // Toggle debug overlays
+    app.add_systems(OnEnter(Debugging(false)), despawn_debug_nav_grid);
+    app.add_systems(
+        Update,
+        (toggle_debug_ui, toggle_debug_colliders).run_if(state_changed::<Debugging>),
+    );
+    app.add_systems(
+        Update,
+        spawn_debug_nav_grid::<OverworldProcGen>.run_if(in_state(Debugging(true))),
     );
 }
 
 /// Toggle key
 const TOGGLE_KEY: KeyCode = KeyCode::Backquote;
 
+/// Whether or not debugging is active
+#[derive(States, Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
+struct Debugging(bool);
+
+/// Toggle debugging
+fn toggle_debugging(
+    mut next_state: ResMut<NextState<Debugging>>,
+    debug_state: Res<State<Debugging>>,
+) {
+    next_state.set(Debugging(!debug_state.0));
+}
+
 /// Toggle debug overlay for UI
-fn toggle_debug_ui(mut options: ResMut<UiDebugOptions>) {
-    // Toggle ui debug options
-    options.toggle();
+fn toggle_debug_ui(mut options: ResMut<UiDebugOptions>, debug_state: Res<State<Debugging>>) {
+    options.enabled = debug_state.0;
 }
 
 /// Toggle debug overlay for rapier colliders
-fn toggle_debug_colliders(mut render_context: ResMut<DebugRenderContext>) {
-    // Toggle rapier debug context
-    render_context.enabled = !render_context.enabled;
+fn toggle_debug_colliders(
+    mut render_context: ResMut<DebugRenderContext>,
+    debug_state: Res<State<Debugging>>,
+) {
+    render_context.enabled = debug_state.0;
 }
 
-/// Toggle debug overlay for nav grids
-fn toggle_debug_nav_grid<T>(
+/// Despawn debug nav grid
+fn despawn_debug_nav_grid(
+    debug_nav_grid: Single<Entity, (With<DebugGrid>, Without<Grid<OrdinalNeighborhood>>)>,
+    mut commands: Commands,
+) {
+    commands.entity(debug_nav_grid.entity()).despawn();
+}
+
+/// Spawn debug nav grid
+///
+/// ## Traits
+///
+/// - `T` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
+fn spawn_debug_nav_grid<T>(
     debug_nav_grid: Option<Single<Entity, (With<DebugGrid>, Without<Grid<OrdinalNeighborhood>>)>>,
     nav_grid: Single<(Entity, &Transform), (With<Grid<OrdinalNeighborhood>>, Without<DebugGrid>)>,
     mut commands: Commands,
@@ -78,9 +110,8 @@ fn toggle_debug_nav_grid<T>(
 ) where
     T: ProcGenerated,
 {
-    // Despawn debug grid and return if any exist
-    if let Some(debug_nav_grid) = debug_nav_grid {
-        commands.entity(debug_nav_grid.entity()).despawn();
+    // Return if debug grid is present
+    if debug_nav_grid.is_some() {
         return;
     }
 
@@ -96,6 +127,7 @@ fn toggle_debug_nav_grid<T>(
                 .enable_chunks()
                 .enable_entrances()
                 .enable_cells()
+                .enable_cached_paths()
                 .build(),
             DebugOffset(transform.translation.xy().extend(0.)),
         ))

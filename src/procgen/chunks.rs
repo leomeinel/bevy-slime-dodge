@@ -17,8 +17,8 @@ use crate::{
     levels::{LEVEL_Z, Level, LevelAssets},
     logging::{error::ERR_LOADING_TILE_DATA, warn::WARN_INCOMPLETE_TILE_DATA},
     procgen::{
-        CHUNK_SIZE, PROCGEN_DISTANCE, ProcGenController, ProcGenRng, ProcGenSpawned, ProcGenTimer,
-        ProcGenerated, TileData, TileHandle,
+        CHUNK_SIZE, PROCGEN_DISTANCE, ProcGenController, ProcGenRng, ProcGenState, ProcGenerated,
+        TileData, TileHandle,
     },
 };
 
@@ -30,32 +30,20 @@ use crate::{
 /// - `A` must implement [`LevelAssets`] and is used as a level's assets.
 /// - `B` must implement [`Level`].
 pub(crate) fn spawn_chunks<T, A, B>(
-    camera: Single<(&Transform, Ref<Transform>), With<CanvasCamera>>,
+    camera: Single<&Transform, With<CanvasCamera>>,
     level: Single<Entity, With<B>>,
     mut rng: Single<&mut WyRand, With<ProcGenRng>>,
     mut commands: Commands,
     mut controller: ResMut<ProcGenController<T>>,
+    mut procgen_state: ResMut<NextState<ProcGenState>>,
     data: Res<Assets<TileData<T>>>,
     handle: Res<TileHandle<T>>,
     assets: Res<A>,
-    timer: Res<ProcGenTimer>,
 ) where
     T: ProcGenerated,
     A: LevelAssets,
     B: Level,
 {
-    // Return if timer has not finished
-    if !timer.0.just_finished() {
-        return;
-    }
-
-    let (camera, ref_camera) = camera.into_inner();
-
-    // Return if camera transform has not changed
-    if !ref_camera.is_changed() {
-        return;
-    }
-
     // Get data from `TileData` with `TileHandle`
     let data = data.get(handle.0.id()).expect(ERR_LOADING_TILE_DATA);
     let tile_size = Vec2::new(data.tile_height, data.tile_width);
@@ -103,6 +91,8 @@ pub(crate) fn spawn_chunks<T, A, B>(
             );
         }
     }
+
+    procgen_state.set(ProcGenState::RebuildNavGrid);
 }
 
 /// Spawn a single chunk
@@ -169,5 +159,4 @@ fn spawn_chunk<T, A>(
 
     // Add chunk container to level so that level handles despawning
     commands.entity(level).add_child(container);
-    commands.trigger(ProcGenSpawned::<T>::default());
 }

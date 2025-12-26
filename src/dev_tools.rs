@@ -24,7 +24,7 @@ use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 use crate::{
     levels::overworld::OverworldProcGen,
     logging::error::{ERR_INVALID_MINIMUM_CHUNK_POS, ERR_LOADING_TILE_DATA},
-    procgen::{CHUNK_SIZE, ProcGenController, ProcGenerated, TileData, TileHandle},
+    procgen::{CHUNK_SIZE, ProcGenController, ProcGenState, ProcGenerated, TileData, TileHandle},
     screens::Screen,
 };
 
@@ -49,13 +49,13 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     // Toggle debug overlays
-    app.add_systems(OnEnter(Debugging(false)), despawn_debug_nav_grid);
     app.add_systems(
         Update,
         (toggle_debug_ui, toggle_debug_colliders).run_if(state_changed::<Debugging>),
     );
+    app.add_systems(OnEnter(Debugging(false)), despawn_debug_nav_grid);
     app.add_systems(
-        Update,
+        OnExit(ProcGenState::RebuildNavGrid),
         spawn_debug_nav_grid::<OverworldProcGen>.run_if(in_state(Debugging(true))),
     );
 }

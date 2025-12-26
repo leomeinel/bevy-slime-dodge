@@ -19,6 +19,7 @@ use crate::{
     levels::overworld::{Overworld, OverworldAssets, OverworldProcGen, spawn_overworld},
     menus::Menu,
     procgen::{
+        ProcGenState,
         chunks::spawn_chunks,
         clear_procgen_controller, despawn_procgen,
         navigation::{rebuild_nav_grid, spawn_nav_grid, update_nav_grid_agent_pos},
@@ -38,27 +39,30 @@ pub(super) fn plugin(app: &mut App) {
             .chain(),
     );
 
-    // Start spawning/despawning chunks and characters
+    // Start spawning/despawning chunks and characters and build nav grid
     app.add_systems(
         Update,
-        ((
+        (
             (
-                despawn_procgen::<OverworldProcGen, OverworldProcGen>,
-                despawn_procgen::<Slime, OverworldProcGen>,
+                despawn_procgen::<Slime, OverworldProcGen, false>,
+                despawn_procgen::<OverworldProcGen, OverworldProcGen, true>,
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(ProcGenState::Despawn).and(in_state(Screen::Gameplay))),
             (
                 spawn_chunks::<OverworldProcGen, OverworldAssets, Overworld>,
                 spawn_characters::<Slime, OverworldProcGen, Overworld>,
             )
-                .chain(),
-        )
-            .chain())
-        .run_if(in_state(Screen::Gameplay)),
+                .chain()
+                .run_if(in_state(ProcGenState::Spawn).and(in_state(Screen::Gameplay))),
+            rebuild_nav_grid
+                .run_if(in_state(ProcGenState::RebuildNavGrid).and(in_state(Screen::Gameplay))),
+        ),
     );
 
+    // Update agent pos after exiting `ProcGenState::RebuildNavGrid`
     app.add_systems(
-        PostUpdate,
+        OnExit(ProcGenState::RebuildNavGrid),
         (
             update_nav_grid_agent_pos::<Player, OverworldProcGen>,
             update_nav_grid_agent_pos::<Slime, OverworldProcGen>,
@@ -66,8 +70,6 @@ pub(super) fn plugin(app: &mut App) {
             .chain()
             .run_if(in_state(Screen::Gameplay)),
     );
-
-    app.add_observer(rebuild_nav_grid);
 
     // Open pause on pressing P or Escape and pause game
     app.add_systems(

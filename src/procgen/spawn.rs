@@ -19,8 +19,8 @@ use crate::{
     levels::Level,
     logging::error::{ERR_LOADING_COLLISION_DATA, ERR_LOADING_TILE_DATA},
     procgen::{
-        CHUNK_SIZE, ProcGenController, ProcGenRng, ProcGenSpawned, ProcGenTimer, ProcGenerated,
-        TileData, TileHandle,
+        CHUNK_SIZE, ProcGenController, ProcGenRng, ProcGenState, ProcGenerated, TileData,
+        TileHandle,
     },
 };
 
@@ -37,6 +37,7 @@ pub(crate) fn spawn_characters<T, A, B>(
     level: Single<Entity, With<B>>,
     mut commands: Commands,
     mut controller: ResMut<ProcGenController<T>>,
+    mut procgen_state: ResMut<NextState<ProcGenState>>,
     mut visual_map: ResMut<VisualMap>,
     animations: Res<Animations<T>>,
     chunk_controller: Res<ProcGenController<A>>,
@@ -45,21 +46,11 @@ pub(crate) fn spawn_characters<T, A, B>(
     shadow: Res<Shadow<T>>,
     tile_data: Res<Assets<TileData<A>>>,
     tile_handle: Res<TileHandle<A>>,
-    timer: Res<ProcGenTimer>,
 ) where
     T: Character + ProcGenerated,
     A: ProcGenerated,
     B: Level,
 {
-    // Return if timer has not finished
-    if !timer.0.just_finished() {
-        return;
-    }
-    // Return if `chunk_controller` has not changed
-    if !chunk_controller.is_changed() {
-        return;
-    }
-
     // Get data from `TileData` with `TileHandle`
     let data = tile_data
         .get(tile_handle.0.id())
@@ -93,6 +84,8 @@ pub(crate) fn spawn_characters<T, A, B>(
             &tile_size,
         );
     }
+
+    procgen_state.set(ProcGenState::RebuildNavGrid);
 }
 
 /// Number of characters to spawn per chunk
@@ -143,6 +136,5 @@ fn spawn_character<T>(
 
         // Add entity to level so that level handles despawning
         commands.entity(level).add_child(entity);
-        commands.trigger(ProcGenSpawned::<T>::default());
     }
 }

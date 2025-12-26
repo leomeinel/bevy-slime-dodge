@@ -14,11 +14,11 @@ use bevy_northstar::prelude::*;
 
 use crate::{
     characters::Character,
-    levels::{Level, overworld::OverworldProcGen},
+    levels::Level,
     logging::error::{ERR_INVALID_MINIMUM_CHUNK_POS, ERR_LOADING_TILE_DATA},
     procgen::{
-        CHUNK_SIZE, PROCGEN_DISTANCE, ProcGenController, ProcGenSpawned, ProcGenTimer,
-        ProcGenerated, TileData, TileHandle,
+        CHUNK_SIZE, PROCGEN_DISTANCE, ProcGenController, ProcGenState, ProcGenerated, TileData,
+        TileHandle,
     },
 };
 
@@ -56,26 +56,38 @@ pub(crate) fn spawn_nav_grid<T>(
     commands.entity(level.entity()).add_child(entity);
 }
 
-// FIXME: This is quite heavy. Try to reduce load or spread load.
 /// Rebuild the nav grid
 ///
 /// Currently this sets every cell to [Nav::Passable], but this can in the future also include obstacle detection.
 pub(crate) fn rebuild_nav_grid(
-    _: On<ProcGenSpawned<OverworldProcGen>>,
     mut grid: Single<&mut Grid<OrdinalNeighborhood>>,
+    mut procgen_state: ResMut<NextState<ProcGenState>>,
 ) {
+    let mut rebuild = false;
+
     // Set every cell to passable
     for x in 0..GRID_SIZE.x {
         for y in 0..GRID_SIZE.y {
-            grid.set_nav(UVec3::new(x, y, 0), Nav::Passable(1));
+            let pos = UVec3::new(x, y, 0);
+            // Continue if pos is already passable to avoid rebuilds
+            if matches!(grid.nav(pos), Some(Nav::Passable(1))) {
+                continue;
+            }
+
+            // Set `pos` to passable and set rebuild to true
+            grid.set_nav(pos, Nav::Passable(1));
+            rebuild = true;
         }
     }
 
-    // Rebuild grid
-    grid.build();
+    // Rebuild grid if rebuild is true
+    if rebuild {
+        grid.build();
+    }
+
+    procgen_state.set(ProcGenState::Despawn);
 }
 
-// FIXME: Maybe do not use a timer and do not loop through all characters.
 /// Update nav grid position of [`Character`]
 ///
 /// ## Traits
@@ -83,25 +95,15 @@ pub(crate) fn rebuild_nav_grid(
 /// - `T` must implement '[`Character`]'.
 /// - `A` must implement [`ProcGenerated`] and is used as a level's procedurally generated item.
 pub(crate) fn update_nav_grid_agent_pos<T, A>(
-    characters: Query<(Entity, &Transform, Ref<Transform>), With<T>>,
+    characters: Query<(Entity, &Transform), With<T>>,
     mut commands: Commands,
     controller: Res<ProcGenController<A>>,
     data: Res<Assets<TileData<A>>>,
     handle: Res<TileHandle<A>>,
-    timer: Res<ProcGenTimer>,
 ) where
     T: Character,
     A: ProcGenerated,
 {
-    // Return if timer has not finished
-    if !timer.0.just_finished() {
-        return;
-    }
-    // Return if controller positions are empty.
-    if controller.positions.is_empty() {
-        return;
-    }
-
     // Get data from `TileData` with `TileHandle`
     let data = data.get(handle.0.id()).expect(ERR_LOADING_TILE_DATA);
     let tile_size = Vec2::new(data.tile_height, data.tile_width);
@@ -113,12 +115,8 @@ pub(crate) fn update_nav_grid_agent_pos<T, A>(
         .min_by_key(|pos| (pos.x, pos.y))
         .expect(ERR_INVALID_MINIMUM_CHUNK_POS);
 
-    for (entity, transform, ref_transform) in characters {
-        // Continue if transform is not changed
-        if !ref_transform.is_changed() {
-            continue;
-        }
-
+    // FIXME: Find a reliable way to avoid looping through all characters
+    for (entity, transform) in characters {
         // Insert agent pos
         let pos = UVec2::new(
             (transform.translation.x / tile_size.x - min_chunk_pos.x as f32 * CHUNK_SIZE.x as f32)

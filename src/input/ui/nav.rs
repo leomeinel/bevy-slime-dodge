@@ -125,9 +125,7 @@ pub(super) fn override_interaction_on_focus(
         let interaction = match interaction_override.0 {
             Interaction::Hovered if input_focus.0 != Some(entity) => Interaction::None,
             Interaction::None if input_focus.0 == Some(entity) => Interaction::Hovered,
-            _ => {
-                continue;
-            }
+            _ => continue,
         };
         interaction_override.set_if_neq(interaction.into());
     }

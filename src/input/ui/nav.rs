@@ -88,7 +88,7 @@ pub(super) fn reset_interaction_overrides(
     query: Query<&mut InteractionOverride, With<AutoDirectionalNavigation>>,
 ) {
     for mut interaction_override in query {
-        interaction_override.set_new(Interaction::None);
+        interaction_override.set_if_neq(InteractionOverride::default());
     }
 }
 
@@ -122,11 +122,14 @@ pub(super) fn override_interaction_on_focus(
         return;
     }
     for (entity, mut interaction_override) in query {
-        if input_focus.0 == Some(entity) {
-            interaction_override.set_new_if_current(Interaction::None, Interaction::Hovered);
-        } else {
-            interaction_override.set_new_if_current(Interaction::Hovered, Interaction::None);
-        }
+        let interaction = match interaction_override.0 {
+            Interaction::Hovered if input_focus.0 != Some(entity) => Interaction::None,
+            Interaction::None if input_focus.0 == Some(entity) => Interaction::Hovered,
+            _ => {
+                continue;
+            }
+        };
+        interaction_override.set_if_neq(interaction.into());
     }
 }
 
@@ -139,8 +142,10 @@ pub(super) fn override_interaction_on_click(
     if !input_focus_visible.0 {
         return;
     }
-    if let Ok(mut interaction_override) = query.get_mut(event.entity) {
-        interaction_override.set_new_if_current(Interaction::Hovered, Interaction::Pressed);
+    if let Ok(mut interaction_override) = query.get_mut(event.entity)
+        && interaction_override.0 == Interaction::Hovered
+    {
+        interaction_override.set_if_neq(Interaction::Pressed.into());
     };
 }
 
@@ -154,7 +159,9 @@ pub(super) fn override_interaction_on_release(
         return;
     }
     for mut interaction_override in query {
-        interaction_override.set_new_if_current(Interaction::Pressed, Interaction::None);
+        if interaction_override.0 == Interaction::Pressed {
+            interaction_override.set_if_neq(InteractionOverride::default());
+        }
     }
 }
 

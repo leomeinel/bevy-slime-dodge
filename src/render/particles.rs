@@ -50,17 +50,6 @@ where
 {
 }
 
-trait ParticleSpawnerExt {
-    fn set_new_active(&mut self, new: bool);
-}
-impl ParticleSpawnerExt for ParticleSpawnerState {
-    fn set_new_active(&mut self, new: bool) {
-        if self.active != new {
-            self.active = new;
-        }
-    }
-}
-
 /// Toggle a [`Particle`].
 #[derive(EntityEvent)]
 pub(crate) struct ToggleParticle<T>
@@ -157,7 +146,7 @@ fn on_toggle_particle<T>(
     T: Particle,
 {
     let mut state = particle_query.get_mut(event.entity).unwrap();
-    state.set_new_active(event.activate);
+    state.active = event.activate;
 }
 
 /// Spawn and despawn a [`Particle`] as child once.

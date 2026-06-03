@@ -40,16 +40,9 @@ pub(crate) struct OverrideInteraction(pub(crate) bool);
 /// Wrapper for [`Interaction`] that overrides [`Interaction`] if [`OverrideInteraction`] is true.
 #[derive(Component, Default, PartialEq)]
 pub(crate) struct InteractionOverride(pub(crate) Interaction);
-impl InteractionOverride {
-    pub(crate) fn set_new(&mut self, new: Interaction) {
-        if self.0 != new {
-            self.0 = new;
-        }
-    }
-    pub(crate) fn set_new_if_current(&mut self, current: Interaction, new: Interaction) {
-        if self.0 == current {
-            self.set_new(new);
-        }
+impl From<Interaction> for InteractionOverride {
+    fn from(interaction: Interaction) -> Self {
+        Self(interaction)
     }
 }
 

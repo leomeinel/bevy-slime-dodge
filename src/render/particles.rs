@@ -57,17 +57,17 @@ where
     T: Particle,
 {
     pub(crate) entity: Entity,
-    pub(crate) activate: bool,
+    pub(crate) active: bool,
     pub(crate) _phantom: PhantomData<T>,
 }
 impl<T> ToggleParticle<T>
 where
     T: Particle,
 {
-    pub(crate) fn new(entity: Entity, activate: bool) -> Self {
+    pub(crate) fn new(entity: Entity, active: bool) -> Self {
         Self {
             entity,
-            activate,
+            active,
             _phantom: PhantomData,
         }
     }
@@ -146,7 +146,7 @@ fn on_toggle_particle<T>(
     T: Particle,
 {
     let mut state = particle_query.get_mut(event.entity).unwrap();
-    state.active = event.activate;
+    state.active = event.active;
 }
 
 /// Spawn and despawn a [`Particle`] as child once.

@@ -1,7 +1,20 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use crate::characters::prelude::*;
+use crate::{animations::prelude::*, characters::prelude::*};
+
+/// Can apply to anything that walks.
+pub(crate) trait Walker
+where
+    Self: Character,
+{
+    /// [`AnimationAction`] for walking.
+    ///
+    /// This allows certain [`Character`]s to for example also jump while walking.
+    fn walk_action() -> AnimationAction {
+        AnimationAction::Walk
+    }
+}
 
 /// Direction the [`Character`] is facing.
 #[derive(Component)]

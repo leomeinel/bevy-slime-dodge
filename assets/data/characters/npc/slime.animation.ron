@@ -21,24 +21,24 @@ AnimationData (
             frame_duration_ms: 2400,
         )
     ),
-    walk_clips: Some((
+    jump_clips: Some((
         AnimationClip (
-            key: AnimationKey((Walk, South)),
+            key: AnimationKey((Jump, South)),
             sprite_coords: [(0, 3), (1, 3), (2, 3), (3, 3), (4, 3)],
             audio_indexes: [],
-            frame_duration_ms: 400,
+            frame_duration_ms: 200,
         ),
         AnimationClip (
-            key: AnimationKey((Walk, North)),
+            key: AnimationKey((Jump, North)),
             sprite_coords: [(0, 4), (1, 4), (2, 4), (3, 4), (4, 4)],
             audio_indexes: [],
-            frame_duration_ms: 400,
+            frame_duration_ms: 200,
         ),
         AnimationClip (
-            key: AnimationKey((Walk, East)),
+            key: AnimationKey((Jump, East)),
             sprite_coords: [(0, 5), (1, 5), (2, 5), (3, 5), (4, 5)],
             audio_indexes: [],
-            frame_duration_ms: 400,
+            frame_duration_ms: 200,
         )
     )),
 )

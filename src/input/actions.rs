@@ -88,7 +88,7 @@ pub(super) fn apply_walk(
     let direction = event.value * walk_speed.0 * time.delta_secs();
     controller.translation = Some(direction);
     if animation_state.action != AnimationAction::Jump {
-        animation_state.action = AnimationAction::Walk;
+        animation_state.action = Player::walk_action();
     }
 }
 

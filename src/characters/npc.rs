@@ -33,9 +33,6 @@ impl_character_assets!(SlimeAssets);
 #[derive(Component, Default, Reflect)]
 pub(crate) struct Npc;
 
-/// Walk speed of a [`Slime`].
-const SLIME_WALK_SPEED: f32 = 60.;
-
 /// Slime marker
 #[derive(Component, Default, Reflect)]
 pub(crate) struct Slime;
@@ -58,7 +55,8 @@ impl Character for Slime {
                 KinematicCharacterController::default(),
                 LockedAxes::ROTATION_LOCKED,
                 FacingDirection::default(),
-                WalkSpeed(SLIME_WALK_SPEED),
+                JumpHeight::new(8.),
+                WalkSpeed(60.),
             ),
             // Navigation
             Navigator,
@@ -85,4 +83,9 @@ impl Character for Slime {
     }
 }
 impl ProcGenerated for Slime {}
+impl Walker for Slime {
+    fn walk_action() -> AnimationAction {
+        AnimationAction::Jump
+    }
+}
 impl Visible for Slime {}

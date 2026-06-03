@@ -76,11 +76,19 @@ impl Plugin for AnimationsPlugin {
         app.add_systems(
             Update,
             (
-                jump::insert_timer::<Player>,
-                jump::move_sprite::<Player>.before(PhysicsSet::SyncBackend),
-                jump::reset_jump::<Player>,
+                (
+                    jump::insert_timer::<Player>,
+                    jump::move_sprite::<Player>.before(PhysicsSet::SyncBackend),
+                    jump::reset_jump::<Player>,
+                )
+                    .chain(),
+                (
+                    jump::insert_timer::<Slime>,
+                    jump::move_sprite::<Slime>.before(PhysicsSet::SyncBackend),
+                    jump::reset_jump::<Slime>,
+                )
+                    .chain(),
             )
-                .chain()
                 .run_if(in_state(Screen::Gameplay))
                 .in_set(AppSystems::Update),
         );

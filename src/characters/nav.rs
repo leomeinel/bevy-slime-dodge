@@ -157,8 +157,9 @@ fn next_path_step(
 /// Number used as divisor for path overshoot threshold
 const PATH_OVERSHOOT_THRESHOLD_DIVISOR: f32 = 50.;
 
+// FIXME: This causes animations in most cases to be synced up because everything might switch at the same time.
 /// Apply [`Path`]
-pub(super) fn apply_path(
+pub(super) fn apply_path<T>(
     navigator_query: Query<
         (
             Entity,
@@ -173,7 +174,9 @@ pub(super) fn apply_path(
     >,
     mut commands: Commands,
     time: Res<Time>,
-) {
+) where
+    T: Walker,
+{
     for (
         entity,
         transform,
@@ -201,7 +204,7 @@ pub(super) fn apply_path(
         }
 
         if animation_state.action == AnimationAction::Idle {
-            animation_state.action = AnimationAction::Walk;
+            animation_state.action = T::walk_action();
         }
 
         // NOTE: We are looping until threshold to allow multiple next

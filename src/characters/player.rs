@@ -16,11 +16,6 @@ use crate::{
     animations::prelude::*, characters::prelude::*, input::prelude::*, render::prelude::*,
 };
 
-/// [`Player`] walk speed.
-const PLAYER_WALK_SPEED: f32 = 60.;
-/// [`Player`] jump height.
-const PLAYER_JUMP_HEIGHT: f32 = 12.;
-
 /// Assets that are serialized from a ron file
 #[derive(AssetCollection, Resource, Reflect, Default)]
 pub(crate) struct PlayerAssets {
@@ -62,8 +57,8 @@ impl Character for Player {
                 },
                 LockedAxes::ROTATION_LOCKED,
                 FacingDirection::default(),
-                JumpHeight::new(PLAYER_JUMP_HEIGHT),
-                WalkSpeed(PLAYER_WALK_SPEED),
+                JumpHeight::new(12.),
+                WalkSpeed(60.),
             ),
             // Navigation
             NavTarget(128),
@@ -89,6 +84,7 @@ impl Character for Player {
         )
     }
 }
+impl Walker for Player {}
 impl Visible for Player {}
 
 /// On [`InitAttack`], set [`AimDirection`] and write [`Attack`].

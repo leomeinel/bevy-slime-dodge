@@ -13,7 +13,7 @@ pub(crate) mod prelude {
         AimDirection, Attack, AttackData, AttackStats, AttackTimer, DelayAttack, InitAttack, punch,
     };
     pub(crate) use super::health::{Damage, Health};
-    pub(crate) use super::movement::{FacingDirection, WalkSpeed};
+    pub(crate) use super::movement::{FacingDirection, WalkSpeed, Walker};
     pub(crate) use super::nav::{NavTarget, Navigator, Path};
     pub(crate) use super::npc::{Npc, Slime, SlimeAssets};
     pub(crate) use super::player::{Player, PlayerAssets};
@@ -53,7 +53,7 @@ impl Plugin for CharactersPlugin {
                     nav::refresh_path::<OverworldProcGen>,
                 )
                     .run_if(in_state(DespawnProcGen(false))),
-                nav::apply_path.in_set(PausableSystems),
+                nav::apply_path::<Slime>.in_set(PausableSystems),
             )
                 .run_if(in_state(ProcGenInit(true)).and(in_state(Screen::Gameplay)))
                 .chain()

@@ -77,7 +77,7 @@ impl Plugin for RenderPlugin {
     }
 }
 
-/// Can apply to anything that is visible
+/// Can apply to anything that is visible.
 pub(super) trait Visible
 where
     Self: Component + Default + Reflectable,

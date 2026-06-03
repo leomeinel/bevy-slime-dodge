@@ -93,7 +93,7 @@ fn spawn_splash_screen(mut commands: Commands, splash_assets: Res<SplashAssets>)
 
 /// Check status of [`SplashTimer`]
 fn check_splash_timer(next_state: ResMut<NextState<Screen>>, timer: Res<SplashTimer>) {
-    if timer.0.just_finished() {
+    if timer.just_finished() {
         enter_title_screen(next_state);
     }
 }

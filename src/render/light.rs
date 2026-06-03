@@ -152,7 +152,7 @@ fn update_ambient_intensity(
     day_timer: Res<DayTimer>,
     day_update_timer: Res<DayUpdateTimer>,
 ) {
-    if !day_update_timer.0.just_finished() {
+    if !day_update_timer.just_finished() {
         return;
     }
 
@@ -162,6 +162,6 @@ fn update_ambient_intensity(
         .ping_pong()
         .expect(ERR_INVALID_DOMAIN_EASING);
     // NOTE: We are multiplying by 2 since `PingPongCurve` has a domain from 0 to 2.
-    let intensity = intensity.sample_clamped(day_timer.0.fraction() * 2.);
+    let intensity = intensity.sample_clamped(day_timer.fraction() * 2.);
     light.intensity = intensity;
 }

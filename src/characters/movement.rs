@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
@@ -14,23 +12,9 @@ impl Default for FacingDirection {
     }
 }
 
-/// [`Character`] jump height.
-#[derive(Component, Default)]
-pub(crate) struct JumpHeight(pub(crate) f32);
-
 /// [`Character`] walking speed.
 #[derive(Component)]
 pub(crate) struct WalkSpeed(pub(crate) f32);
-
-/// Timer that tracks jumping
-#[derive(Component, Debug, Clone, PartialEq, Reflect, Deref, DerefMut)]
-#[reflect(Component)]
-pub(crate) struct JumpTimer(pub(crate) Timer);
-impl JumpTimer {
-    pub(crate) fn from_millis(millis: u64) -> Self {
-        Self(Timer::new(Duration::from_millis(millis), TimerMode::Once))
-    }
-}
 
 /// Update [`FacingDirection`].
 pub(super) fn update_facing_direction(
@@ -49,7 +33,7 @@ pub(super) fn update_facing_direction(
 ) {
     for (mut facing, timer, aim_direction, controller_output) in query {
         let direction = if let Some(timer) = timer
-            && !timer.0.is_finished()
+            && !timer.just_finished()
             && aim_direction.0 != Vec2::ZERO
         {
             aim_direction.0

@@ -16,13 +16,13 @@ pub(crate) struct AnimationAudioIndex(pub(crate) Option<usize>);
 
 /// Animation audio map.
 ///
-/// This stores a map of [`AnimationState`] to audio indexes.
+/// This stores a map of [`AnimationKey`] to audio indexes.
 #[derive(Resource, Default)]
 pub(crate) struct AnimationAudioMap<T>
 where
     T: Visible,
 {
-    pub(crate) map: HashMap<AnimationState, Vec<usize>>,
+    pub(crate) map: HashMap<AnimationKey, Vec<usize>>,
     pub(crate) _phantom: PhantomData<T>,
 }
 
@@ -58,7 +58,7 @@ pub(super) fn update_animation_sounds<T, A>(
             &current_frame,
             state,
             &audio_map.map,
-            assets.sounds(state.0.0),
+            assets.sounds(state.action),
         ) else {
             audio_index.0 = None;
             continue;
@@ -78,10 +78,10 @@ fn choose_sound(
     rng: &mut WyRand,
     current_frame: &usize,
     state: &AnimationState,
-    audio_map: &HashMap<AnimationState, Vec<usize>>,
+    audio_map: &HashMap<AnimationKey, Vec<usize>>,
     sounds: &Option<Vec<Handle<AudioSource>>>,
 ) -> Option<Handle<AudioSource>> {
-    let Some(audio_indexes) = audio_map.get(state) else {
+    let Some(audio_indexes) = audio_map.get(&AnimationKey::from(state)) else {
         warn_once!("{}", WARN_INCOMPLETE_ANIMATION_DATA);
         return None;
     };

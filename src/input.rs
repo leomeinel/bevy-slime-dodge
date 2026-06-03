@@ -26,9 +26,9 @@ impl Plugin for InputPlugin {
         app.add_input_context::<Player>();
 
         app.add_observer(actions::apply_walk);
-        app.add_observer(actions::init_melee_attack);
         app.add_observer(actions::reset_walk);
         app.add_observer(actions::set_jump);
+        app.add_observer(actions::init_melee_attack);
         app.add_observer(mock::reset_aim_mock);
 
         app.configure_sets(

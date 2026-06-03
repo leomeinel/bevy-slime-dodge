@@ -16,8 +16,10 @@ use crate::{
     animations::prelude::*, characters::prelude::*, input::prelude::*, render::prelude::*,
 };
 
-/// Walk speed of [`Player`].
+/// [`Player`] walk speed.
 const PLAYER_WALK_SPEED: f32 = 60.;
+/// [`Player`] jump height.
+const PLAYER_JUMP_HEIGHT: f32 = 12.;
 
 /// Assets that are serialized from a ron file
 #[derive(AssetCollection, Resource, Reflect, Default)]
@@ -60,7 +62,7 @@ impl Character for Player {
                 },
                 LockedAxes::ROTATION_LOCKED,
                 FacingDirection::default(),
-                JumpHeight::default(),
+                JumpHeight::new(PLAYER_JUMP_HEIGHT),
                 WalkSpeed(PLAYER_WALK_SPEED),
             ),
             // Navigation

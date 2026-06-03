@@ -43,6 +43,7 @@ pub(crate) fn player_input() -> impl Bundle {
                     Axial::left_stick(),
                 ))
             ),
+            // Animation
             (
                 Action::<Jump>::new(),
                 bindings![KeyCode::Space, GamepadButton::South],
@@ -86,9 +87,8 @@ pub(super) fn apply_walk(
     let (mut animation_state, mut controller, walk_speed) = player.into_inner();
     let direction = event.value * walk_speed.0 * time.delta_secs();
     controller.translation = Some(direction);
-
-    if animation_state.0.0 == AnimationAction::Idle {
-        animation_state.set_new_action(AnimationAction::Walk);
+    if animation_state.action != AnimationAction::Jump {
+        animation_state.action = AnimationAction::Walk;
     }
 }
 
@@ -98,23 +98,20 @@ pub(super) fn reset_walk(
     player: Single<(&mut AnimationState, &mut KinematicCharacterController), With<Player>>,
 ) {
     let (mut animation_state, mut controller) = player.into_inner();
-
-    if animation_state.0.0 != AnimationAction::Jump {
-        let direction = Vec2::ZERO;
-        controller.translation = Some(direction);
-        animation_state.set_new_action(AnimationAction::Idle);
+    controller.translation = Some(Vec2::ZERO);
+    if animation_state.action != AnimationAction::Jump {
+        animation_state.action = AnimationAction::Idle;
     }
 }
 
 /// On a fired [`Jump`], set [`AnimationAction::Jump`].
 pub(super) fn set_jump(
     _: On<Fire<Jump>>,
-    player: Single<&mut AnimationState, With<Player>>,
+    mut animation_state: Single<&mut AnimationState, With<Player>>,
     pause: Res<State<Pause>>,
 ) {
     if !pause.get().0 {
-        let mut animation_state = player.into_inner();
-        animation_state.set_new_action(AnimationAction::Jump);
+        animation_state.action = AnimationAction::Jump;
     }
 }
 
@@ -131,7 +128,7 @@ pub(super) fn init_melee_attack(
     }
     let (entity, stats, timer) = *player;
     if let Some(timer) = timer
-        && !timer.0.is_finished()
+        && !timer.is_finished()
     {
         return;
     }

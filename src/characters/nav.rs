@@ -200,8 +200,8 @@ pub(super) fn apply_path(
             return;
         }
 
-        if animation_state.0.0 == AnimationAction::Idle {
-            animation_state.set_new_action(AnimationAction::Walk);
+        if animation_state.action == AnimationAction::Idle {
+            animation_state.action = AnimationAction::Walk;
         }
 
         // NOTE: We are looping until threshold to allow multiple next
@@ -231,5 +231,5 @@ pub(super) fn on_stop_nav(
 
     // NOTE: Using try here is necessary since the entity might have been despawned elsewhere.
     commands.entity(entity).try_remove::<Path>();
-    animation_state.set_new_action(AnimationAction::Idle);
+    animation_state.action = AnimationAction::Idle;
 }

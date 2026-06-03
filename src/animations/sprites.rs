@@ -90,7 +90,8 @@ pub(super) fn setup_animations<T>(
             &mut animations,
             &base_sheet,
             floating_sheet,
-            AnimationRepeat::Times(1),
+            // NOTE: This is necessary to allow continuous jumps.
+            AnimationRepeat::Loop,
         );
 
         let millis =
@@ -133,7 +134,7 @@ pub(super) fn update_animations<T>(
         let (mut base_animation, mut transform, children) = base_query
             .get_mut(*child_entity)
             .expect(ERR_INVALID_CHILDREN);
-        if timer.is_some_and(|t| t.0.just_finished()) {
+        if timer.is_some_and(|t| t.just_finished()) {
             base_animation.reset();
         }
 
@@ -145,7 +146,7 @@ pub(super) fn update_animations<T>(
         );
         if let Some(next_y_offset) = sprite_animations
             .y_offset_map
-            .get(state)
+            .get(&AnimationKey::from(state))
             .and_then(|o| o.as_ref())
         {
             transform.translation.y += *next_y_offset - y_offset.0;
@@ -157,7 +158,7 @@ pub(super) fn update_animations<T>(
             && let Ok(mut floating_animation) = floating_query.get_mut(entity)
             && let Some(animation) = &&sprite_animations.floating
         {
-            if timer.is_some_and(|t| t.0.just_finished()) {
+            if timer.is_some_and(|t| t.just_finished()) {
                 floating_animation.reset();
             }
             state.switch(
@@ -182,9 +183,9 @@ pub(super) fn update_animation_orientations<T>(
         let Some(orientation) = AnimationOrientation::try_from_vec2(direction.0) else {
             continue;
         };
-        state.0.1 = orientation;
+        state.orientation = orientation;
 
-        if state.0.1 == AnimationOrientation::East {
+        if state.orientation == AnimationOrientation::East {
             let child = children
                 .iter()
                 .find(|e| base_query.contains(*e))

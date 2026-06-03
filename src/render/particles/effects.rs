@@ -103,8 +103,8 @@ pub(super) fn toggle_dust_trail<T>(
             .expect(ERR_INVALID_CHILDREN);
         let (entity, particle, timer) = particle_query.get(child).expect(ERR_INVALID_CHILDREN);
 
-        if timer.0.just_finished() {
-            let activate = state.0.0 == particle.0
+        if timer.just_finished() {
+            let activate = state.action == particle.0
                 && controller_output.desired_translation.length_squared()
                     > ((walk_speed.0 * MIN_WALK_SPEED_FRAC) * time.delta_secs()).squared();
 

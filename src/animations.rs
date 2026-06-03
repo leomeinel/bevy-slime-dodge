@@ -17,15 +17,16 @@ mod sprites;
 #[allow(unused_imports)]
 pub(crate) mod prelude {
     pub(crate) use super::audio::{AnimationAudioIndex, AnimationAudioMap};
-    pub(crate) use super::jump::JumpDuration;
+    pub(crate) use super::jump::{JumpDuration, JumpHeight, JumpTimer};
     pub(crate) use super::{
         ANIMATION_DELAY_RANGE_SECS, AnimationAction, AnimationBase, AnimationClip, AnimationData,
-        AnimationDataCache, AnimationHandle, AnimationOrientation, AnimationRng, AnimationState,
-        AnimationTimer, AnimationYOffset, LastAnimationAction, SpriteAnimation, SpriteAnimations,
+        AnimationDataCache, AnimationHandle, AnimationKey, AnimationOrientation, AnimationRng,
+        AnimationState, AnimationTimer, AnimationYOffset, LastAnimationAction, SpriteAnimation,
+        SpriteAnimations,
     };
 }
 
-use std::{borrow::Borrow, marker::PhantomData, ops::Range};
+use std::{marker::PhantomData, ops::Range};
 
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier2d::prelude::*;
@@ -75,10 +76,9 @@ impl Plugin for AnimationsPlugin {
         app.add_systems(
             Update,
             (
-                jump::switch_animation::<Player>,
-                jump::move_sprite::<Player>.before(PhysicsSet::SyncBackend),
-                // NOTE: The timer is inserted last to ensure that `switch_animation` fires and that `move_sprite` finishes.
                 jump::insert_timer::<Player>,
+                jump::move_sprite::<Player>.before(PhysicsSet::SyncBackend),
+                jump::reset_jump::<Player>,
             )
                 .chain()
                 .run_if(in_state(Screen::Gameplay))
@@ -86,11 +86,18 @@ impl Plugin for AnimationsPlugin {
         );
         app.add_systems(
             Update,
-            tick_component_timers::<AnimationTimer>.in_set(AppSystems::TickTimers),
+            (
+                tick_component_timers::<AnimationTimer>,
+                tick_component_timers::<jump::JumpTimer>,
+            )
+                .in_set(AppSystems::TickTimers),
         );
         app.add_systems(
             PostUpdate,
-            remove_oneshot_component_timers::<AnimationTimer>,
+            (
+                remove_oneshot_component_timers::<AnimationTimer>,
+                remove_oneshot_component_timers::<jump::JumpTimer>,
+            ),
         );
     }
 }
@@ -144,7 +151,7 @@ where
 
 /// [`Sprite`] animations.
 ///
-/// This stores the [`Sprite`] for the animation and a map of [`AnimationState`] to [`Handle<Animation>`].
+/// This stores the [`Sprite`] for the animation and a map of [`AnimationKey`] to [`Handle<Animation>`].
 #[derive(Resource, Default)]
 pub(crate) struct SpriteAnimations<T>
 where
@@ -155,7 +162,7 @@ where
     // TODO: Think about if this should also affect the collision.
     //       Logically this makes sense, but would add extra complexity and for small
     //       offsets almost seems completely unnecessary.
-    pub(crate) y_offset_map: HashMap<AnimationState, Option<f32>>,
+    pub(crate) y_offset_map: HashMap<AnimationKey, Option<f32>>,
     _phantom: PhantomData<T>,
 }
 impl<T> SpriteAnimations<T>
@@ -172,19 +179,19 @@ where
     ) {
         for clip in clips {
             self.base.map.insert(
-                clip.state,
+                clip.key,
                 clip.create_animation(animations, base_sheet, repetitions),
             );
             if let Some(ref mut floating) = self.floating
                 && let Some(floating_sheet) = floating_sheet
             {
                 floating.map.insert(
-                    clip.state,
+                    clip.key,
                     clip.create_animation(animations, floating_sheet, repetitions),
                 );
             }
 
-            self.y_offset_map.insert(clip.state, clip.y_offset);
+            self.y_offset_map.insert(clip.key, clip.y_offset);
         }
     }
 }
@@ -193,7 +200,7 @@ where
 #[derive(Default)]
 pub(crate) struct SpriteAnimation {
     pub(crate) sprite: Sprite,
-    pub(crate) map: HashMap<AnimationState, Handle<Animation>>,
+    pub(crate) map: HashMap<AnimationKey, Handle<Animation>>,
 }
 
 /// Marker [`Component`] for animation base.
@@ -256,20 +263,16 @@ impl AnimationOrientation {
 }
 
 /// Animation state containing [`AnimationAction`] and [`AnimationOrientation`].
-#[derive(Component, Deserialize, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect, Debug)]
-pub(crate) struct AnimationState(pub(crate) (AnimationAction, AnimationOrientation));
+#[derive(Component, Default, Clone, Reflect, Debug)]
+pub(crate) struct AnimationState {
+    pub(crate) action: AnimationAction,
+    pub(crate) orientation: AnimationOrientation,
+}
 impl AnimationState {
-    /// Sets a new [`AnimationAction`] if it has not already been set.
-    pub(crate) fn set_new_action(&mut self, new: AnimationAction) {
-        if self.0.0 != new {
-            self.0.0 = new;
-        }
-    }
-
     pub(crate) fn animation(&self, animation: &SpriteAnimation) -> Handle<Animation> {
         animation
             .map
-            .get(&self.0)
+            .get(&AnimationKey::from(self))
             .expect(ERR_NONEXISTENT_ANIMATION)
             .clone()
     }
@@ -287,26 +290,30 @@ impl AnimationState {
         }
 
         if let Some(last_action) = last_action
-            && *last_action == self.0.0
+            && *last_action == self.action
         {
             sprite_animation.animation = new_animation;
         } else {
             sprite_animation.switch(new_animation);
         }
         audio_index.0 = None;
-        *last_action = Some(self.0.0);
-    }
-}
-impl Borrow<(AnimationAction, AnimationOrientation)> for AnimationState {
-    fn borrow(&self) -> &(AnimationAction, AnimationOrientation) {
-        &self.0
+        *last_action = Some(self.action);
     }
 }
 
-/// Deserializable animation clip containing animation data for every [`AnimationState`].
+/// Animation key containing [`AnimationAction`] and [`AnimationOrientation`].
+#[derive(Deserialize, Default, Clone, Copy, PartialEq, Eq, Hash, Reflect, Debug)]
+pub(crate) struct AnimationKey(pub(crate) (AnimationAction, AnimationOrientation));
+impl From<&AnimationState> for AnimationKey {
+    fn from(state: &AnimationState) -> Self {
+        Self((state.action, state.orientation))
+    }
+}
+
+/// Deserializable animation clip identified by [`AnimationKey`].
 #[derive(Deserialize, Clone, Debug, Default)]
 pub(crate) struct AnimationClip {
-    pub(crate) state: AnimationState,
+    pub(crate) key: AnimationKey,
     pub(crate) sprite_coords: Vec<(usize, usize)>,
     pub(crate) audio_indexes: Vec<usize>,
     pub(crate) frame_duration_ms: u32,

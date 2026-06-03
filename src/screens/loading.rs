@@ -211,16 +211,16 @@ fn cache_animation_data_and_related<T>(
 
     let mut audio_map = HashMap::new();
     for clip in data.idle_clips.as_ref() {
-        audio_map.insert(clip.state, clip.audio_indexes.clone());
+        audio_map.insert(clip.key, clip.audio_indexes.clone());
     }
     if let Some(walk_clips) = data.walk_clips.as_ref() {
         for clip in walk_clips {
-            audio_map.insert(clip.state, clip.audio_indexes.clone());
+            audio_map.insert(clip.key, clip.audio_indexes.clone());
         }
     }
     if let Some(jump_clips) = data.jump_clips.as_ref() {
         for clip in jump_clips {
-            audio_map.insert(clip.state, clip.audio_indexes.clone());
+            audio_map.insert(clip.key, clip.audio_indexes.clone());
         }
     }
     commands.insert_resource(AnimationAudioMap::<T> {

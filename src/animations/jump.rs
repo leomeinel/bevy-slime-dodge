@@ -1,8 +1,8 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, time::Duration};
 
 use bevy::prelude::*;
 
-use crate::{animations::prelude::*, characters::prelude::*, log::prelude::*, render::Visible};
+use crate::{animations::prelude::*, log::prelude::*, render::Visible};
 
 /// Jump duration in milliseconds for `T`.
 #[derive(Resource, Debug, Default)]
@@ -25,16 +25,25 @@ where
     }
 }
 
-/// Switch [`AnimationState`] out of [`AnimationAction::Jump`] after [`JumpTimer`] has finished.
-pub(super) fn switch_animation<T>(
-    container_query: Query<(&mut AnimationState, &JumpTimer), With<T>>,
-) where
-    T: Visible,
-{
-    for (mut state, timer) in container_query {
-        if timer.0.just_finished() && state.0.0 == AnimationAction::Jump {
-            state.0.0 = AnimationAction::Idle;
-        }
+/// Timer that tracks jumping.
+#[derive(Component, Default, Debug, Clone, PartialEq, Reflect, Deref, DerefMut)]
+#[reflect(Component)]
+pub(crate) struct JumpTimer(pub(crate) Timer);
+impl JumpTimer {
+    pub(crate) fn from_millis(millis: u64) -> Self {
+        Self(Timer::new(Duration::from_millis(millis), TimerMode::Once))
+    }
+}
+
+/// [`Character`](crate::characters::Character) jump height.
+#[derive(Component, Default)]
+pub(crate) struct JumpHeight {
+    pub(crate) max: f32,
+    pub(crate) current: f32,
+}
+impl JumpHeight {
+    pub(crate) fn new(max: f32) -> Self {
+        Self { max, ..default() }
     }
 }
 
@@ -47,7 +56,7 @@ pub(super) fn insert_timer<T>(
     T: Visible,
 {
     for (entity, state) in container_query {
-        if state.0.0 == AnimationAction::Jump {
+        if state.action == AnimationAction::Jump {
             // NOTE: Using try here is necessary since the entity might have been despawned elsewhere.
             commands
                 .entity(entity)
@@ -56,35 +65,40 @@ pub(super) fn insert_timer<T>(
     }
 }
 
-/// Jump height
-const JUMP_HEIGHT: f32 = 12.;
-
-/// Move sprite from [`EaseFunction::QuadraticOut`].
+/// Move sprite according to progress of [`JumpTimer`].
 pub(super) fn move_sprite<T>(
-    container_query: Query<(&AnimationState, &mut JumpHeight, &JumpTimer, &Children), With<T>>,
+    container_query: Query<(&mut JumpHeight, &JumpTimer, &Children), With<T>>,
     mut base_query: Query<&mut Transform, With<AnimationBase>>,
 ) where
     T: Visible,
 {
-    for (state, mut jump_height, timer, children) in container_query {
-        if state.0.0 != AnimationAction::Jump {
-            return;
-        }
-
-        // Apply jump
+    for (mut height, timer, children) in container_query {
         let factor = EaseFunction::QuadraticOut
             .ping_pong()
             .expect(ERR_INVALID_DOMAIN_EASING);
         // NOTE: We are multiplying by 2 since `PingPongCurve` has a domain from 0 to 2.
-        let factor = factor.sample_clamped(timer.0.fraction() * 2.);
-        let target = JUMP_HEIGHT * factor;
+        let factor = factor.sample_clamped(timer.fraction() * 2.);
+        let target = height.max * factor;
 
         let child = children
             .iter()
             .find(|e| base_query.contains(*e))
             .expect(ERR_INVALID_CHILDREN);
         let mut transform = base_query.get_mut(child).expect(ERR_INVALID_CHILDREN);
-        transform.translation.y += target - jump_height.0;
-        jump_height.0 = target;
+        transform.translation.y += target - height.current;
+        height.current = target;
+    }
+}
+
+// NOTE: This might insert undesirable idle frames but is much simpler than more sophisticated solutions. Visually these frames are not noticeable.
+/// Reset jump if [`JumpTimer`] just finished.
+pub(super) fn reset_jump<T>(container_query: Query<(&mut AnimationState, &JumpTimer), With<T>>)
+where
+    T: Visible,
+{
+    for (mut state, timer) in container_query {
+        if timer.just_finished() {
+            state.action = AnimationAction::Idle;
+        }
     }
 }

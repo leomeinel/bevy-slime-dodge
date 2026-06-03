@@ -13,7 +13,7 @@ pub(crate) mod prelude {
         AimDirection, Attack, AttackData, AttackStats, AttackTimer, DelayAttack, InitAttack, punch,
     };
     pub(crate) use super::health::{Damage, Health};
-    pub(crate) use super::movement::{FacingDirection, JumpHeight, JumpTimer, WalkSpeed};
+    pub(crate) use super::movement::{FacingDirection, WalkSpeed};
     pub(crate) use super::nav::{NavTarget, Navigator, Path};
     pub(crate) use super::npc::{Npc, Slime, SlimeAssets};
     pub(crate) use super::player::{Player, PlayerAssets};
@@ -71,18 +71,11 @@ impl Plugin for CharactersPlugin {
         );
         app.add_systems(
             Update,
-            (
-                tick_component_timers::<attack::AttackTimer>,
-                tick_component_timers::<movement::JumpTimer>,
-            )
-                .in_set(AppSystems::TickTimers),
+            tick_component_timers::<attack::AttackTimer>.in_set(AppSystems::TickTimers),
         );
         app.add_systems(
             PostUpdate,
-            (
-                remove_oneshot_component_timers::<attack::AttackTimer>,
-                remove_oneshot_component_timers::<movement::JumpTimer>,
-            ),
+            remove_oneshot_component_timers::<attack::AttackTimer>,
         );
 
         app.add_observer(attack::on_delay_attack);

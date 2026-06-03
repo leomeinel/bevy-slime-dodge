@@ -78,13 +78,15 @@ impl Plugin for AnimationsPlugin {
             (
                 (
                     jump::insert_timer::<Player>,
-                    jump::move_sprite::<Player>.before(PhysicsSet::SyncBackend),
+                    (jump::move_sprite::<Player>, jump::scale_shadow::<Player>)
+                        .before(PhysicsSet::SyncBackend),
                     jump::reset_jump::<Player>,
                 )
                     .chain(),
                 (
                     jump::insert_timer::<Slime>,
-                    jump::move_sprite::<Slime>.before(PhysicsSet::SyncBackend),
+                    (jump::move_sprite::<Slime>, jump::scale_shadow::<Slime>)
+                        .before(PhysicsSet::SyncBackend),
                     jump::reset_jump::<Slime>,
                 )
                     .chain(),

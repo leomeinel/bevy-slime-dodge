@@ -2,7 +2,7 @@ use std::{marker::PhantomData, time::Duration};
 
 use bevy::prelude::*;
 
-use crate::{animations::prelude::*, log::prelude::*, render::Visible};
+use crate::{animations::prelude::*, log::prelude::*, render::prelude::*};
 
 /// Jump duration in milliseconds for `T`.
 #[derive(Resource, Debug, Default)]
@@ -87,6 +87,27 @@ pub(super) fn move_sprite<T>(
         let mut transform = base_query.get_mut(child).expect(ERR_INVALID_CHILDREN);
         transform.translation.y += target - height.current;
         height.current = target;
+    }
+}
+
+/// Maximum jump height.
+const SHADOW_MAX_CAST_HEIGHT: f32 = 64.;
+
+/// Scale [`MeshShadow`] with [`JumpHeight`].
+pub(super) fn scale_shadow<T>(
+    container_query: Query<(&JumpHeight, &Children), With<T>>,
+    mut shadow_query: Query<&mut Transform, With<MeshShadow>>,
+) where
+    T: Visible,
+{
+    for (height, children) in container_query {
+        let scale = 1. - height.current.clamp(0., SHADOW_MAX_CAST_HEIGHT) / SHADOW_MAX_CAST_HEIGHT;
+        let child = children
+            .iter()
+            .find(|e| shadow_query.contains(*e))
+            .expect(ERR_INVALID_CHILDREN);
+        let mut transform = shadow_query.get_mut(child).expect(ERR_INVALID_CHILDREN);
+        transform.scale = Vec2::splat(scale).extend(1.);
     }
 }
 
